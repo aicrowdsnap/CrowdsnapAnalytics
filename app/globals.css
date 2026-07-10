@@ -1,0 +1,142 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+:root {
+  /* dark-mode values (also the pre-hydration fallback) */
+  --color-void: #12161a;
+  --color-void-2: #1c2227;
+  --color-slate: #313a42;
+  --color-ink: #edf2ee;
+  --color-ink-muted: #8fa39b;
+
+  --color-neon-lime: #a0d405;
+  --color-neon-green: #2c9e4b;
+  --color-neon-teal: #12b3a8;
+
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-surface: rgba(255, 255, 255, 0.045);
+  --color-surface-hover: rgba(255, 255, 255, 0.06);
+  --color-surface-strong: rgba(255, 255, 255, 0.09);
+
+  /* constant regardless of theme — always-dark text for use on bright accent fills */
+  --color-on-accent: #10160f;
+
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+/* Light theme — same token names, deepened accents for AA contrast on white.
+   Toggled by ThemeContext setting data-theme="light" on <html>. */
+[data-theme='light'] {
+  --color-void: #f6f8f6;
+  --color-void-2: #ffffff;
+  --color-slate: #dfe6e1;
+  --color-ink: #1b2420;
+  --color-ink-muted: #5b6b62;
+
+  --color-neon-lime: #7cab04;
+  --color-neon-green: #218a41;
+  --color-neon-teal: #0e8f86;
+
+  --color-border: rgba(19, 26, 22, 0.1);
+  --color-surface: rgba(255, 255, 255, 0.65);
+  --color-surface-hover: rgba(19, 26, 22, 0.045);
+  --color-surface-strong: rgba(19, 26, 22, 0.08);
+  box-shadow: 0 4px 30px rgba(0, 0, 0, 0.02);
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  background-color: var(--color-void);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  transition: background-color 0.25s ease, color 0.25s ease;
+}
+
+::selection {
+  background: var(--color-neon-green);
+  color: #fff;
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, var(--color-neon-lime), var(--color-neon-green));
+  border-radius: 999px;
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-neon-lime);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Frosted glass surface */
+.glass {
+  background: var(--color-surface);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  transition: background-color 0.25s ease;
+}
+
+/* Gradient text */
+.text-gradient-aurora {
+  background: linear-gradient(90deg, var(--color-neon-lime), var(--color-neon-teal) 55%, var(--color-neon-green));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+/* Signature hairline */
+.aurora-seam {
+  background: linear-gradient(
+    90deg,
+    var(--color-neon-lime),
+    var(--color-neon-teal),
+    var(--color-neon-green),
+    var(--color-neon-lime)
+  );
+  background-size: 200% 100%;
+  animation: aurora-flow 7s linear infinite;
+}
+
+@keyframes aurora-flow {
+  to {
+    background-position: 200% 0;
+  }
+}
+
+@keyframes blob-float {
+  0%,
+  100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(30px, -40px) scale(1.08);
+  }
+  66% {
+    transform: translate(-25px, 25px) scale(0.94);
+  }
+}
+.blob {
+  animation: blob-float 20s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .aurora-seam,
+  .blob {
+    animation: none;
+  }
+}
