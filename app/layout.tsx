@@ -1,6 +1,12 @@
 import './globals.css';
 import { AuthProvider } from '@/components/AuthContext';
 import { ThemeProvider } from '@/components/ThemeContext';
+import { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: 'CrowdSnap | Analytics',
+  description: 'Real-time Analytics View',
+};
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (

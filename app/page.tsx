@@ -160,7 +160,7 @@ export default function AnalyticsDashboard() {
             </div>
           )}
 
-          <Toolbar onViewChange={setActiveView} currentView={activeView} />
+          <Toolbar onViewChange={setActiveView} currentView={activeView} data={chartData} />
         </div>
       </main>
 
