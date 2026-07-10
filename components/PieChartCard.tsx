@@ -74,13 +74,29 @@ export default function PieChartCard({ data }: PieChartCardProps) {
               cx="50%"
               cy="50%"
               outerRadius={95}
-              label={({ payload }) => {
-                const pct = (payload && (payload as any).percentage) ?? 0;
-                return pct > 0 ? `${pct}%` : '';
-              }}
               labelLine={false}
-              // Dynamically sets the typography fill colors depending on the viewport mode context
-              style={{ fill: labelColor, fontSize: '11px', fontWeight: '600' }}
+              label={({ cx, cy, midAngle, innerRadius, outerRadius, percentage }) => {
+                if (!percentage || percentage <= 0) return null;
+                
+                // Math matrix computing precise placement layout coordinates inside the vector arcs
+                const RADIAN = Math.PI / 180;
+                const radius = innerRadius + (outerRadius - innerRadius) * 0.55;
+                const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+                return (
+                  <text
+                    x={x}
+                    y={y}
+                    fill={labelColor}
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    className="text-[11px] font-bold tracking-tight select-none pointer-events-none transition-colors duration-200"
+                  >
+                    {`${percentage}%`}
+                  </text>
+                );
+              }}
             >
               {data.map((entry, index) => (
                 <Cell

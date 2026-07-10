@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer, Tooltip } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
 import { useTheme } from './ThemeContext';
 
 interface ChartItem {
@@ -32,14 +32,15 @@ export default function LineChartCard({ data }: LineChartCardProps) {
 
       <div className="w-full h-56">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={data} margin={{ top: 10, right: 15, left: -25, bottom: 20 }}>
+          <LineChart data={data} margin={{ top: 10, right: 15, left: -25, bottom: 35 }}>
             <CartesianGrid strokeDasharray="3 3" stroke={gridStroke} vertical={false} />
             <XAxis
               dataKey="answer"
               tick={{ fontSize: 9, fill: tickColor }}
+              angle={-20} 
+              textAnchor="end" 
               tickLine={false}
               interval={0}
-              className="font-medium"
             />
             <YAxis
               allowDecimals={false}

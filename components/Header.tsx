@@ -12,9 +12,25 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-30 w-full glass border-b border-white/10 px-6 py-3 flex justify-between items-center">
-      <h1 className="text-xl font-display font-bold tracking-tight text-gradient-aurora">
-        CROWDSNAP ANALYTICS
-      </h1>
+      
+      <div className="flex items-center gap-3 select-none">
+      <a 
+        href="https://crowdsnap.ai" 
+        target="_blank" 
+        rel="noopener noreferrer"
+        className="inline-flex items-center"
+      >
+        <img 
+          src="/logo.png" 
+          alt="CrowdSnap" 
+          className="h-10 w-auto object-contain transition-transform duration-200 active:scale-95 cursor-pointer"
+        />
+      </a>
+      
+      <span className="text-s font-display font-bold tracking-widest text-[var(--color-ink-muted)] uppercase border-l border-[var(--color-border)] pl-3 hidden sm:inline-block">
+        Analytics
+      </span>
+    </div>
 
       <div className="flex items-center gap-4">
         {/* Light/Dark Mode Toggle Switch Button Container */}
