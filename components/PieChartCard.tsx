@@ -75,8 +75,10 @@ export default function PieChartCard({ data }: PieChartCardProps) {
               cy="50%"
               outerRadius={95}
               labelLine={false}
-              label={({ cx, cy, midAngle, innerRadius, outerRadius, percentage }) => {
+              label={({ cx, cy, midAngle, innerRadius, outerRadius, value }) => {
+                const percentage = typeof value === 'number' ? value : Number(value);
                 if (!percentage || percentage <= 0) return null;
+                if (midAngle === undefined) return null;
                 
                 // Math matrix computing precise placement layout coordinates inside the vector arcs
                 const RADIAN = Math.PI / 180;
