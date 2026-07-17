@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-const BASE_URL = 'https://crowdsnap-api-qa2.azurewebsites.net';
+const BASE_URL = 'https://crowdsnap.ai';
 
 const SYSTEM_AUTH_CREDENTIALS = {
   email: process.env.CROWDSNAP_EMAIL || "",
