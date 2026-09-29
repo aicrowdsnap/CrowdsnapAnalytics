@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Edit3, Loader2, BarChart2, Users } from 'lucide-react';
+import { Edit3, Loader2, BarChart2, Users, Calendar } from 'lucide-react';
 import { useAuth } from '../components/AuthContext';
 import { fetchAnalyticsData } from '../services/api';
 import Header from '../components/Header';
@@ -30,6 +30,7 @@ export default function AnalyticsDashboard() {
   const [uniqueVoters, setUniqueVoters] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [dateRange, setDateRange] = useState<{ start: string; end: string } | null>(null);
 
   useEffect(() => {
     async function initMetrics() {
@@ -42,11 +43,36 @@ export default function AnalyticsDashboard() {
           const voteResults = pollObj.voteresults || {};
           const totalCount = voteResults.responses_count || 0;
           const rawVotesArray = voteResults.v || [];
+          const rawResponses = voteResults.responses || [];
 
           setQOrder(pollObj.qorder || '0');
           setPollQuestion(pollObj.question || '');
           setTotalResponses(totalCount);
           setUniqueVoters(voteResults.votercount || 0);
+
+          if (rawResponses.length > 0) {
+            const timestamps = rawResponses
+              .map((r: any) => new Date(r.datetime.replace(' ', 'T')).getTime())
+              .filter((time: number) => !isNaN(time));
+
+            if (timestamps.length > 0) {
+              const minDate = new Date(Math.min(...timestamps));
+              const maxDate = new Date(Math.max(...timestamps));
+              
+              const formatter = new Intl.DateTimeFormat('en-US', { 
+                year: 'numeric',
+                month: 'short', 
+                day: 'numeric', 
+                hour: '2-digit', 
+                minute: '2-digit' 
+              });
+
+              setDateRange({
+                start: formatter.format(minDate),
+                end: formatter.format(maxDate)
+              });
+            }
+          }
 
           const cleanTransformedRows = rawVotesArray.map((item: any) => ({
             answer: item.vote || 'Unassigned Options',
@@ -77,20 +103,30 @@ export default function AnalyticsDashboard() {
 
           {/* Configuration Header */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 border-b border-white/10 pb-4">
-            <div className="flex items-center gap-2.5">
-              <div className="relative w-6 h-6 rounded-full p-[1.5px] aurora-seam shrink-0">
-                <div className="flex items-center justify-center w-full h-full rounded-full bg-void-2 text-[11px] font-bold text-ink font-mono">
-                  {qOrder}
+              <div className="flex items-center gap-2.5">
+                <div className="relative w-6 h-6 rounded-full p-[1.5px] aurora-seam shrink-0">
+                  <div className="flex items-center justify-center w-full h-full rounded-full bg-void-2 text-[11px] font-bold text-ink font-mono">
+                    {qOrder}
+                  </div>
+                </div>
+                <div>
+                  <h2 className="text-base font-display font-bold text-ink tracking-tight">{pollQuestion}</h2>
+                  <div className="flex flex-wrap items-center gap-3 mt-1 text-[11px] text-ink-muted">
+                    <span className="flex items-center gap-1">
+                      <BarChart2 className="w-3 h-3 text-neon-teal" /> Responses: <strong className="text-ink">{totalResponses}</strong>
+                    </span>
+                    <span className="flex items-center gap-1">
+                      <Users className="w-3 h-3 text-neon-lime" /> Participants: <strong className="text-ink">{uniqueVoters}</strong>
+                    </span>
+                    {dateRange && (
+                      <span className="flex items-center gap-1 sm:ml-2 sm:pl-2 sm:border-l border-white/10">
+                        <Calendar className="w-3 h-3 text-neon-lime/70" /> 
+                        <strong className="text-ink">{dateRange.start} - {dateRange.end}</strong>
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
-              <div>
-                <h2 className="text-base font-display font-bold text-ink tracking-tight">{pollQuestion}</h2>
-                <div className="flex items-center gap-3 mt-1 text-[11px] text-ink-muted">
-                  <span className="flex items-center gap-1"><BarChart2 className="w-3 h-3 text-neon-teal" /> Responses: <strong className="text-ink">{totalResponses}</strong></span>
-                  <span className="flex items-center gap-1"><Users className="w-3 h-3 text-neon-lime" /> Voters: <strong className="text-ink">{uniqueVoters}</strong></span>
-                </div>
-              </div>
-            </div>
 
             {/* Privilege Control Action Button */}
             {isAuthenticated && (
