@@ -2,13 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { Grid3x3, AlertCircle } from 'lucide-react';
-
-interface MatrixCell {
-  row: string;
-  column: string;
-  userInput: string;
-  notes: Record<string, string>;
-}
+import { MatrixCell } from '../types/matrix';
 
 interface MatrixAnalyticsCardProps {
   data: MatrixCell[];
@@ -46,7 +40,15 @@ export default function MatrixAnalyticsCard({ data, metadata, pollQuestion }: Ma
 
     // Calculate statistics
     const totalCells = data.length;
-    const filledCells = data.filter(d => Object.keys(d.notes).length > 0).length;
+    const filledCells = data.filter(d => {
+      const notes = d.notes;
+      if (typeof notes === 'string') {
+        return notes.length > 0;
+      } else if (notes && typeof notes === 'object') {
+        return Object.keys(notes).length > 0;
+      }
+      return false;
+    }).length;
 
     return {
       rows: uniqueRows,
@@ -120,7 +122,19 @@ export default function MatrixAnalyticsCard({ data, metadata, pollQuestion }: Ma
                 </td>
                 {columns.map(col => {
                   const cellItem = cellData.get(row)?.get(col);
-                  const hasData = cellItem && Object.keys(cellItem.notes).length > 0;
+                  const notes = cellItem?.notes;
+                  let hasData = false;
+                  let notesEntries: Array<[string, string]> = [];
+
+                  if (notes) {
+                    if (typeof notes === 'string') {
+                      hasData = notes.length > 0;
+                      if (hasData) notesEntries = [['0', notes]];
+                    } else if (typeof notes === 'object') {
+                      notesEntries = Object.entries(notes);
+                      hasData = notesEntries.length > 0;
+                    }
+                  }
 
                   return (
                     <td
@@ -131,7 +145,7 @@ export default function MatrixAnalyticsCard({ data, metadata, pollQuestion }: Ma
                     >
                       {hasData ? (
                         <div className="flex flex-col gap-1">
-                          {Object.entries(cellItem.notes).map(([idx, val]) => (
+                          {notesEntries.map(([idx, val]) => (
                             <span
                               key={idx}
                               className="inline-block px-2 py-1 bg-neon-lime/10 text-neon-lime rounded text-[9px] font-mono"
@@ -157,26 +171,37 @@ export default function MatrixAnalyticsCard({ data, metadata, pollQuestion }: Ma
       <div className="mt-4 p-3 bg-white/5 rounded-lg border border-white/10">
         <p className="text-xs font-semibold text-ink mb-3">Response Details</p>
         <div className="space-y-2 max-h-[300px] overflow-y-auto">
-          {data.map((item, idx) => (
-            <div
-              key={idx}
-              className="p-2 bg-white/[0.02] rounded border border-white/10 text-[10px] space-y-1"
-            >
-              <p className="font-mono text-neon-lime">
-                Row: <span className="text-ink font-bold">{item.row}</span> | Column:{' '}
-                <span className="text-ink font-bold">{item.column}</span>
-              </p>
-              {Object.keys(item.notes).length > 0 && (
-                <div className="flex flex-wrap gap-1">
-                  {Object.entries(item.notes).map(([idx, val]) => (
-                    <span key={idx} className="px-2 py-0.5 bg-neon-teal/10 text-neon-teal rounded">
-                      {val}
-                    </span>
-                  ))}
-                </div>
-              )}
-            </div>
-          ))}
+          {data.map((item, idx) => {
+            let notesDisplay: Array<[string, string]> = [];
+            if (item.notes) {
+              if (typeof item.notes === 'string') {
+                notesDisplay = [['0', item.notes]];
+              } else if (typeof item.notes === 'object') {
+                notesDisplay = Object.entries(item.notes);
+              }
+            }
+
+            return (
+              <div
+                key={idx}
+                className="p-2 bg-white/[0.02] rounded border border-white/10 text-[10px] space-y-1"
+              >
+                <p className="font-mono text-neon-lime">
+                  Row: <span className="text-ink font-bold">{item.row}</span> | Column:{' '}
+                  <span className="text-ink font-bold">{item.column}</span>
+                </p>
+                {notesDisplay.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {notesDisplay.map(([idx, val]) => (
+                      <span key={idx} className="px-2 py-0.5 bg-neon-teal/10 text-neon-teal rounded">
+                        {val}
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>

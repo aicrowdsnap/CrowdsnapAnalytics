@@ -15,18 +15,12 @@ import RadarChartCard from '../components/RadarChartCard';
 import MatrixAnalyticsCard from '../components/MatrixAnalyticsCard';
 import Toolbar, { DashboardView } from '../components/Toolbar';
 import GridComponent from '../components/GridComponent';
+import { MatrixCell } from '../types/matrix';
 
 interface TransformedMetrics {
   answer: string;
   count: number;
   percentage: number;
-}
-
-interface MatrixCell {
-  row: string;
-  column: string;
-  userInput: string;
-  notes: Record<string, string>;
 }
 
 export default function AnalyticsDashboard() {
@@ -64,6 +58,11 @@ export default function AnalyticsDashboard() {
           setUniqueVoters(voteResults.votercount || 0);
           setPollType(pollObj.qtype || '');
           setPollMetadata(pollObj.metadata || '');
+
+          // Automatically switch to grid tab for matrix-type questions
+          if (pollObj.qtype === 'matrix') {
+            setActiveTab('grid');
+          }
 
           if (rawResponses.length > 0) {
             const timestamps = rawResponses
@@ -115,11 +114,17 @@ export default function AnalyticsDashboard() {
                   // Use row-column as key to avoid duplicates
                   const key = `${cell.row}-${cell.column}`;
                   if (!matrixCellsMap.has(key)) {
+                    // Handle notes that might be an object with numeric keys or a plain string
+                    let processedNotes = cell.notes || {};
+                    if (typeof cell.notes === 'object' && !Array.isArray(cell.notes)) {
+                      processedNotes = cell.notes; // Keep as-is for text-type matrices
+                    }
+                    
                     matrixCellsMap.set(key, {
                       row: cell.row || '',
                       column: cell.column || '',
-                      userInput: cell.userInput || '',
-                      notes: cell.notes || {}
+                      userInput: cell.userInput || false,
+                      notes: processedNotes
                     });
                   }
                 });

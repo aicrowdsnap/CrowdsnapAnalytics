@@ -1,14 +1,8 @@
 'use client';
 
 import React, { useMemo } from 'react';
-import { Grid3x3 } from 'lucide-react';
-
-interface MatrixCell {
-  row: string;
-  column: string;
-  userInput: string;
-  notes: Record<string, string>;
-}
+import { Grid3x3, Check, X } from 'lucide-react';
+import { MatrixCell } from '../types/matrix';
 
 interface GridComponentProps {
   matrixData?: MatrixCell[];
@@ -21,9 +15,10 @@ interface GridComponentProps {
 }
 
 export default function GridComponent({ matrixData = [], metadata, pollMetadata }: GridComponentProps) {
-  const { columns, rows, displayData } = useMemo(() => {
+  const { columns, rows, isCheckboxMatrix } = useMemo(() => {
     let cols: string[] = [];
     let rowsList: string[] = [];
+    let matrixType = 'text';
 
     // Try to parse pollMetadata first (from API response)
     if (pollMetadata) {
@@ -31,6 +26,7 @@ export default function GridComponent({ matrixData = [], metadata, pollMetadata 
         const parsed = JSON.parse(pollMetadata);
         cols = parsed.columns || [];
         rowsList = parsed.rows || [];
+        matrixType = parsed.type || 'text';
       } catch (e) {
         console.error('Error parsing pollMetadata:', e);
       }
@@ -58,24 +54,11 @@ export default function GridComponent({ matrixData = [], metadata, pollMetadata 
       });
     }
 
-    // Build display data: for each row, get the first cell (which has all the data)
-    // and map the notes indices to columns
-    const display = new Map<string, Record<string, string>>();
-    
-    rowsList.forEach(row => {
-      // Get any cell from this row (they should all have the same notes)
-      const firstCellInRow = matrixData.find(cell => cell.row === row);
-      if (firstCellInRow && Object.keys(firstCellInRow.notes).length > 0) {
-        const rowData: Record<string, string> = {};
-        // Map notes by index to columns
-        cols.forEach((col, idx) => {
-          rowData[col] = firstCellInRow.notes[String(idx)] || '';
-        });
-        display.set(row, rowData);
-      }
-    });
-
-    return { columns: cols, rows: rowsList, displayData: display };
+    return { 
+      columns: cols, 
+      rows: rowsList, 
+      isCheckboxMatrix: matrixType === 'multi'
+    };
   }, [matrixData, metadata, pollMetadata]);
 
   if (!matrixData || matrixData.length === 0) {
@@ -92,18 +75,102 @@ export default function GridComponent({ matrixData = [], metadata, pollMetadata 
     );
   }
 
+  // For checkbox matrix type
+  if (isCheckboxMatrix) {
+    return (
+      <div className="w-full space-y-4">
+        {/* Header */}
+        <div className="flex items-center gap-2">
+          <Grid3x3 className="w-4 h-4 text-neon-lime" />
+          <h3 className="text-sm font-semibold text-ink">Grid Component (Checkbox Matrix)</h3>
+        </div>
+
+        {/* Checkbox Matrix Table */}
+        <div className="overflow-x-auto rounded-lg border border-white/10">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="bg-white/5 border-b border-white/10">
+                <th className="px-4 py-3 text-left font-semibold text-ink-muted min-w-[200px] bg-white/[0.02]">Row / Column</th>
+                {columns.map(col => (
+                  <th
+                    key={col}
+                    className="px-4 py-3 text-center font-semibold text-ink-muted whitespace-nowrap bg-white/[0.02] border-l border-white/10"
+                  >
+                    {col}
+                  </th>
+                ))}
+                <th className="px-4 py-3 text-left font-semibold text-ink-muted min-w-[120px] bg-white/[0.02] border-l border-white/10">Notes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row, rowIdx) => {
+                // Get the first cell's notes for this row (all cells in a row share the same notes)
+                const rowNotes = matrixData.find(cell => cell.row === row)?.notes;
+                let notesDisplay = '-';
+                
+                if (rowNotes) {
+                  if (typeof rowNotes === 'object' && !Array.isArray(rowNotes)) {
+                    // If notes is an object with numeric keys, extract and join values
+                    const notesArray = Object.values(rowNotes).map(String);
+                    notesDisplay = notesArray.join(' - ');
+                  } else if (typeof rowNotes === 'string') {
+                    notesDisplay = rowNotes;
+                  }
+                }
+
+                return (
+                  <tr key={row} className={rowIdx % 2 === 0 ? 'bg-white/[0.02]' : ''}>
+                    <td className="px-4 py-3 font-semibold text-ink border-r border-white/10 sticky left-0 bg-white/[0.05]">
+                      <div>
+                        <p>{row}</p>
+                      </div>
+                    </td>
+                    {columns.map(col => {
+                      const cell = matrixData.find(c => c.row === row && c.column === col);
+                      const isChecked = cell?.userInput === true;
+
+                      return (
+                        <td
+                          key={`${row}-${col}`}
+                          className={`px-4 py-3 border-l border-white/10 text-center ${
+                            isChecked ? 'bg-neon-lime/5' : 'bg-transparent'
+                          }`}
+                        >
+                          {isChecked ? (
+                            <div className="flex items-center justify-center">
+                              <Check className="w-4 h-4 text-neon-lime" />
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-center">
+                              <X className="w-4 h-4 text-ink-muted/30" />
+                            </div>
+                          )}
+                        </td>
+                      );
+                    })}
+                    <td className="px-4 py-3 text-left border-l border-white/10 text-ink text-xs max-w-xs truncate" title={notesDisplay}>
+                      {notesDisplay}
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
+
+  // For text matrix type (original implementation)
   return (
     <div className="w-full space-y-4">
-      {/* Header */}
       <div className="flex items-center gap-2">
         <Grid3x3 className="w-4 h-4 text-neon-lime" />
         <h3 className="text-sm font-semibold text-ink">Grid Component</h3>
       </div>
 
-      {/* Matrix Table */}
       <div className="overflow-x-auto rounded-lg border border-white/10">
         <table className="w-full text-xs">
-          {/* Table Header */}
           <thead>
             <tr className="bg-white/5 border-b border-white/10">
               <th className="px-4 py-3 text-left font-semibold text-ink-muted min-w-[60px] bg-white/[0.02]">Row</th>
@@ -117,43 +184,53 @@ export default function GridComponent({ matrixData = [], metadata, pollMetadata 
               ))}
             </tr>
           </thead>
-
-          {/* Table Body */}
           <tbody>
-            {rows.map((row, rowIdx) => {
-              const rowData = displayData.get(row);
-              return (
-                <tr key={row} className={rowIdx % 2 === 0 ? 'bg-white/[0.02]' : ''}>
-                  <td className="px-4 py-3 font-semibold text-ink border-r border-white/10 sticky left-0 bg-white/[0.05]">
-                    {row}
-                  </td>
-                  {columns.map(col => {
-                    const value = rowData?.[col] || '';
-                    const hasData = value && value.trim().length > 0;
+            {rows.map((row, rowIdx) => (
+              <tr key={row} className={rowIdx % 2 === 0 ? 'bg-white/[0.02]' : ''}>
+                <td className="px-4 py-3 font-semibold text-ink border-r border-white/10 sticky left-0 bg-white/[0.05]">
+                  {row}
+                </td>
+                {columns.map((col, colIdx) => {
+                  const cell = matrixData.find(c => c.row === row && c.column === col);
+                  
+                  // Extract the actual value from notes based on column index
+                  let displayValue = '';
+                  if (cell?.notes) {
+                    if (typeof cell.notes === 'string') {
+                      displayValue = cell.notes;
+                    } else if (typeof cell.notes === 'object' && !Array.isArray(cell.notes)) {
+                      // For object with numeric keys like {"0": "value1", "1": "value2", ...}
+                      // The key corresponds to the column index
+                      displayValue = cell.notes[colIdx] || '';
+                    }
+                  } else if (typeof cell?.userInput === 'string') {
+                    displayValue = cell.userInput;
+                  }
 
-                    return (
-                      <td
-                        key={`${row}-${col}`}
-                        className={`px-4 py-3 border-l border-white/10 text-center ${
-                          hasData ? 'bg-neon-lime/5' : 'bg-transparent'
-                        }`}
-                      >
-                        {hasData ? (
-                          <span
-                            className="inline-block px-2 py-1 bg-neon-lime/10 text-neon-lime rounded text-[9px] font-mono"
-                            title={value}
-                          >
-                            {value.length > 8 ? value.substring(0, 8) + '...' : value}
-                          </span>
-                        ) : (
-                          <span className="text-ink-muted/30">—</span>
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-              );
-            })}
+                  const hasData = displayValue && displayValue.trim().length > 0;
+
+                  return (
+                    <td
+                      key={`${row}-${col}`}
+                      className={`px-4 py-3 border-l border-white/10 text-center ${
+                        hasData ? 'bg-neon-lime/5' : 'bg-transparent'
+                      }`}
+                    >
+                      {hasData ? (
+                        <span
+                          className="inline-block px-2 py-1 bg-neon-lime/10 text-neon-lime rounded text-[9px] font-mono"
+                          title={displayValue}
+                        >
+                          {displayValue.length > 15 ? displayValue.substring(0, 15) + '...' : displayValue}
+                        </span>
+                      ) : (
+                        <span className="text-ink-muted/30">—</span>
+                      )}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
           </tbody>
         </table>
       </div>
