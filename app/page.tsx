@@ -90,15 +90,27 @@ export default function AnalyticsDashboard() {
 
           // Handle Matrix-type polls
           if (pollObj.qtype === 'matrix' && rawResponses.length > 0) {
-            const matrixCellsMap = new Map<string, MatrixCell>();
-            rawResponses.forEach((response: any) => {
+            console.log('===== MATRIX DATA PROCESSING =====');
+            console.log('Total responses to process:', rawResponses.length);
+            console.log('Raw responses:', rawResponses);
+            
+            const matrixCellsArray: MatrixCell[] = [];
+            let successCount = 0;
+            let errorCount = 0;
+            
+            rawResponses.forEach((response: any, responseIdx: number) => {
               try {
                 // Parse the vote field which contains the actual matrix data
                 let matrixData = [];
+                console.log(`\n--- Processing Response ${responseIdx} ---`);
+                console.log('Raw vote:', response.vote);
+                
                 if (typeof response.vote === 'string') {
                   matrixData = JSON.parse(response.vote);
+                  console.log('Parsed from string:', matrixData);
                 } else if (Array.isArray(response.vote)) {
                   matrixData = response.vote;
+                  console.log('Already an array:', matrixData);
                 }
 
                 // If matrixData is empty, try parsedvote as fallback
@@ -108,31 +120,46 @@ export default function AnalyticsDashboard() {
                     : typeof response.parsedvote === 'string'
                     ? JSON.parse(response.parsedvote)
                     : [];
+                  console.log('Used parsedvote fallback:', matrixData);
                 }
 
-                matrixData.forEach((cell: any) => {
-                  // Use row-column as key to avoid duplicates
-                  const key = `${cell.row}-${cell.column}`;
-                  if (!matrixCellsMap.has(key)) {
-                    // Handle notes that might be an object with numeric keys or a plain string
-                    let processedNotes = cell.notes || {};
-                    if (typeof cell.notes === 'object' && !Array.isArray(cell.notes)) {
-                      processedNotes = cell.notes; // Keep as-is for text-type matrices
-                    }
-                    
-                    matrixCellsMap.set(key, {
-                      row: cell.row || '',
-                      column: cell.column || '',
-                      userInput: cell.userInput || false,
-                      notes: processedNotes
-                    });
+                console.log(`Response ${responseIdx} has ${matrixData.length} items`);
+
+                matrixData.forEach((cell: any, cellIndex: number) => {
+                  let noteValue: any = cell.notes || {};
+                  
+                  if (typeof cell.notes === 'object' && !Array.isArray(cell.notes)) {
+                    noteValue = cell.notes;
+                  } else if (typeof cell.notes === 'string') {
+                    noteValue = cell.notes;
                   }
+                  
+                  const newCell: MatrixCell = {
+                    row: cell.row || '',
+                    column: cell.column || 'Value',
+                    userInput: cell.userInput || false,
+                    notes: noteValue
+                  };
+                  
+                  matrixCellsArray.push(newCell);
+                  console.log(`  Added: row="${newCell.row}", notes="${noteValue}"`);
                 });
+                
+                successCount++;
               } catch (e) {
-                console.error('Error parsing matrix response:', e);
+                errorCount++;
+                console.error(`ERROR in Response ${responseIdx}:`, e);
               }
             });
-            setMatrixData(Array.from(matrixCellsMap.values()));
+            
+            console.log('===== FINAL RESULT =====');
+            console.log('Successful responses:', successCount);
+            console.log('Failed responses:', errorCount);
+            console.log('Total matrix cells:', matrixCellsArray.length);
+            console.log('Matrix cells array:', matrixCellsArray);
+            console.log('================');
+            
+            setMatrixData(matrixCellsArray);
           }
 
           const cleanTransformedRows = rawVotesArray.map((item: any) => ({

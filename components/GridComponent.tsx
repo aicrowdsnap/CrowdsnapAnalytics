@@ -15,7 +15,7 @@ interface GridComponentProps {
 }
 
 export default function GridComponent({ matrixData = [], metadata, pollMetadata }: GridComponentProps) {
-  const { columns, rows, isCheckboxMatrix } = useMemo(() => {
+  const { columns, rows, isCheckboxMatrix, isSimpleRowOnly } = useMemo(() => {
     let cols: string[] = [];
     let rowsList: string[] = [];
     let matrixType = 'text';
@@ -54,10 +54,31 @@ export default function GridComponent({ matrixData = [], metadata, pollMetadata 
       });
     }
 
+    // Check if this is a simple row-only matrix:
+    // - columns are either empty or just ["Value"]
+    // - rows come from metadata (not extracted)
+    let simpleRowOnly = false;
+    if (pollMetadata) {
+      try {
+        const parsed = JSON.parse(pollMetadata);
+        // If metadata.columns is empty or not defined, it's row-only
+        if (!parsed.columns || parsed.columns.length === 0) {
+          simpleRowOnly = true;
+        }
+      } catch (e) {}
+    }
+
+    console.log('GridComponent - matrixData length:', matrixData.length);
+    console.log('GridComponent - columns:', cols);
+    console.log('GridComponent - rows:', rowsList);
+    console.log('GridComponent - isCheckboxMatrix:', matrixType === 'multi');
+    console.log('GridComponent - isSimpleRowOnly:', simpleRowOnly);
+
     return { 
       columns: cols, 
       rows: rowsList, 
-      isCheckboxMatrix: matrixType === 'multi'
+      isCheckboxMatrix: matrixType === 'multi',
+      isSimpleRowOnly: simpleRowOnly
     };
   }, [matrixData, metadata, pollMetadata]);
 
@@ -169,71 +190,117 @@ export default function GridComponent({ matrixData = [], metadata, pollMetadata 
         <h3 className="text-sm font-semibold text-ink">Grid Component</h3>
       </div>
 
-      <div className="overflow-x-auto rounded-lg border border-white/10">
-        <table className="w-full text-xs">
-          <thead>
-            <tr className="bg-white/5 border-b border-white/10">
-              <th className="px-4 py-3 text-left font-semibold text-ink-muted min-w-[60px] bg-white/[0.02]">Row</th>
-              {columns.map(col => (
-                <th
-                  key={col}
-                  className="px-4 py-3 text-center font-semibold text-ink-muted whitespace-nowrap bg-white/[0.02] border-l border-white/10"
-                >
-                  {col}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {rows.map((row, rowIdx) => (
-              <tr key={row} className={rowIdx % 2 === 0 ? 'bg-white/[0.02]' : ''}>
-                <td className="px-4 py-3 font-semibold text-ink border-r border-white/10 sticky left-0 bg-white/[0.05]">
-                  {row}
-                </td>
-                {columns.map((col, colIdx) => {
-                  const cell = matrixData.find(c => c.row === row && c.column === col);
-                  
-                  // Extract the actual value from notes based on column index
-                  let displayValue = '';
-                  if (cell?.notes) {
-                    if (typeof cell.notes === 'string') {
-                      displayValue = cell.notes;
-                    } else if (typeof cell.notes === 'object' && !Array.isArray(cell.notes)) {
-                      // For object with numeric keys like {"0": "value1", "1": "value2", ...}
-                      // The key corresponds to the column index
-                      displayValue = cell.notes[colIdx] || '';
-                    }
-                  } else if (typeof cell?.userInput === 'string') {
-                    displayValue = cell.userInput;
-                  }
-
-                  const hasData = displayValue && displayValue.trim().length > 0;
-
-                  return (
-                    <td
-                      key={`${row}-${col}`}
-                      className={`px-4 py-3 border-l border-white/10 text-center ${
-                        hasData ? 'bg-neon-lime/5' : 'bg-transparent'
-                      }`}
-                    >
-                      {hasData ? (
-                        <span
-                          className="inline-block px-2 py-1 bg-neon-lime/10 text-neon-lime rounded text-[9px] font-mono"
-                          title={displayValue}
-                        >
-                          {displayValue.length > 15 ? displayValue.substring(0, 15) + '...' : displayValue}
+      {/* Handle case where this is a simple row-only matrix */}
+      {isSimpleRowOnly ? (
+        <div className="space-y-3">
+          <div className="text-xs text-ink-muted">
+            Total Responses: <span className="font-semibold text-neon-lime">{matrixData.length}</span>
+          </div>
+          <div className="max-h-[600px] overflow-y-auto rounded-lg border border-white/10">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="bg-white/5 border-b border-white/10 sticky top-0">
+                  <th className="px-4 py-3 text-left font-semibold text-ink-muted min-w-[150px] bg-white/[0.02]">#</th>
+                  <th className="px-4 py-3 text-left font-semibold text-ink-muted min-w-[150px] bg-white/[0.02] border-l border-white/10">Row</th>
+                  <th className="px-4 py-3 text-left font-semibold text-ink-muted min-w-[400px] bg-white/[0.02] border-l border-white/10">Response</th>
+                </tr>
+              </thead>
+              <tbody>
+                {matrixData.map((entry, idx) => (
+                  <tr key={idx} className={idx % 2 === 0 ? 'bg-white/[0.02]' : ''}>
+                    <td className="px-4 py-3 font-mono text-ink-muted border-r border-white/10 sticky left-0 bg-white/[0.05]">
+                      {idx + 1}
+                    </td>
+                    <td className="px-4 py-3 font-semibold text-ink border-l border-white/10">
+                      {entry.row}
+                    </td>
+                    <td className="px-4 py-3 text-left border-l border-white/10 text-ink">
+                      {typeof entry.notes === 'string' ? (
+                        <span className="inline-block px-2 py-1 bg-neon-lime/10 text-neon-lime rounded text-[9px] font-mono max-w-xs overflow-hidden text-ellipsis whitespace-nowrap" title={entry.notes}>
+                          {entry.notes}
+                        </span>
+                      ) : typeof entry.notes === 'object' ? (
+                        <span className="inline-block px-2 py-1 bg-neon-lime/10 text-neon-lime rounded text-[9px] font-mono max-w-xs overflow-hidden text-ellipsis whitespace-nowrap" title={Object.values(entry.notes).join(' / ')}>
+                          {Object.values(entry.notes).join(' / ')}
                         </span>
                       ) : (
                         <span className="text-ink-muted/30">—</span>
                       )}
                     </td>
-                  );
-                })}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ) : (
+        /* Original multi-column matrix display */
+        <div className="overflow-x-auto rounded-lg border border-white/10">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="bg-white/5 border-b border-white/10">
+                <th className="px-4 py-3 text-left font-semibold text-ink-muted min-w-[60px] bg-white/[0.02]">Row</th>
+                {columns.map(col => (
+                  <th
+                    key={col}
+                    className="px-4 py-3 text-center font-semibold text-ink-muted whitespace-nowrap bg-white/[0.02] border-l border-white/10"
+                  >
+                    {col}
+                  </th>
+                ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {rows.map((row, rowIdx) => (
+                <tr key={row} className={rowIdx % 2 === 0 ? 'bg-white/[0.02]' : ''}>
+                  <td className="px-4 py-3 font-semibold text-ink border-r border-white/10 sticky left-0 bg-white/[0.05]">
+                    {row}
+                  </td>
+                  {columns.map((col, colIdx) => {
+                    const cell = matrixData.find(c => c.row === row && c.column === col);
+                    
+                    // Extract the actual value from notes based on column index
+                    let displayValue = '';
+                    if (cell?.notes) {
+                      if (typeof cell.notes === 'string') {
+                        displayValue = cell.notes;
+                      } else if (typeof cell.notes === 'object' && !Array.isArray(cell.notes)) {
+                        // For object with numeric keys like {"0": "value1", "1": "value2", ...}
+                        // The key corresponds to the column index
+                        displayValue = cell.notes[colIdx] || '';
+                      }
+                    } else if (typeof cell?.userInput === 'string') {
+                      displayValue = cell.userInput;
+                    }
+
+                    const hasData = displayValue && displayValue.trim().length > 0;
+
+                    return (
+                      <td
+                        key={`${row}-${col}`}
+                        className={`px-4 py-3 border-l border-white/10 text-center ${
+                          hasData ? 'bg-neon-lime/5' : 'bg-transparent'
+                        }`}
+                      >
+                        {hasData ? (
+                          <span
+                            className="inline-block px-2 py-1 bg-neon-lime/10 text-neon-lime rounded text-[9px] font-mono"
+                            title={displayValue}
+                          >
+                            {displayValue.length > 15 ? displayValue.substring(0, 15) + '...' : displayValue}
+                          </span>
+                        ) : (
+                          <span className="text-ink-muted/30">—</span>
+                        )}
+                      </td>
+                    );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }
