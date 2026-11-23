@@ -29,6 +29,7 @@ export default function AnalyticsDashboard() {
   const [activeTab, setActiveTab] = useState<string>('analytics');
   const [chartData, setChartData] = useState<TransformedMetrics[]>([]);
   const [matrixData, setMatrixData] = useState<MatrixCell[]>([]);
+  const [responsesList, setResponsesList] = useState<Array<{ vote: string; datetime?: string; ip?: string; guid?: string }>>([]);
   const [pollType, setPollType] = useState<string>('');
   const [pollQuestion, setPollQuestion] = useState<string>('');
   const [totalResponses, setTotalResponses] = useState<number>(0);
@@ -93,6 +94,15 @@ export default function AnalyticsDashboard() {
             console.log('===== MATRIX DATA PROCESSING =====');
             console.log('Total responses to process:', rawResponses.length);
             console.log('Raw responses:', rawResponses);
+            
+            // Store responses list for multi-type handling
+            const responsesData = rawResponses.map((resp: any) => ({
+              vote: resp.vote,
+              datetime: resp.datetime,
+              ip: resp.ip,
+              guid: resp.guid
+            }));
+            setResponsesList(responsesData);
             
             const matrixCellsArray: MatrixCell[] = [];
             let successCount = 0;
@@ -305,7 +315,11 @@ export default function AnalyticsDashboard() {
 
           {/* Grid Component Tab */}
           {activeTab === 'grid' && (
-            <GridComponent matrixData={matrixData} pollMetadata={pollMetadata} />
+            <GridComponent 
+              matrixData={matrixData} 
+              pollMetadata={pollMetadata}
+              responsesList={responsesList}
+            />
           )}
         </div>
       </main>
