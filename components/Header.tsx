@@ -5,7 +5,12 @@ import { Menu, LogIn, LogOut, User, Sun, Moon } from 'lucide-react';
 import { useAuth } from './AuthContext';
 import { useTheme } from './ThemeContext';
 
-export default function Header() {
+interface HeaderProps {
+  activeTab?: string;
+  onTabChange?: (tab: string) => void;
+}
+
+export default function Header({ activeTab = 'analytics', onTabChange }: HeaderProps) {
   const { isAuthenticated, setStep, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const [menuOpen, setMenuOpen] = useState(false);
@@ -27,9 +32,28 @@ export default function Header() {
         />
       </a>
       
-      <span className="text-s font-display font-bold tracking-widest text-[var(--color-ink-muted)] uppercase border-l border-[var(--color-border)] pl-3 hidden sm:inline-block">
-        Analytics
-      </span>
+      <div className="flex items-center gap-6 hidden sm:flex border-l border-[var(--color-border)] pl-3">
+        <button
+          onClick={() => onTabChange?.('analytics')}
+          className={`text-s font-display font-bold tracking-widest uppercase transition-colors duration-200 ${
+            activeTab === 'analytics'
+              ? 'text-[var(--color-ink)]'
+              : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
+          }`}
+        >
+          Analytics
+        </button>
+        <button
+          onClick={() => onTabChange?.('grid')}
+          className={`text-s font-display font-bold tracking-widest uppercase transition-colors duration-200 ${
+            activeTab === 'grid'
+              ? 'text-[var(--color-ink)]'
+              : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
+          }`}
+        >
+          Grid Component
+        </button>
+      </div>
     </div>
 
       <div className="flex items-center gap-4">

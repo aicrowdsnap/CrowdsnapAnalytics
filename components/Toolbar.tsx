@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { PieChart, BarChart2, LineChart, Hexagon, RotateCw, Image, Download } from 'lucide-react';
 
-export type DashboardView = 'all' | 'pie' | 'bar' | 'line' | 'radar';
+export type DashboardView = 'all' | 'pie' | 'bar' | 'line' | 'radar' | 'matrix';
 
 interface TelemetryRow {
   answer: string;

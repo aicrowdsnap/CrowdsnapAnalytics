@@ -12,7 +12,9 @@ import DataTable from '../components/DataTable';
 import BarChartCard from '../components/BarChartCard';
 import LineChartCard from '../components/LineChartCard';
 import RadarChartCard from '../components/RadarChartCard';
+import MatrixAnalyticsCard from '../components/MatrixAnalyticsCard';
 import Toolbar, { DashboardView } from '../components/Toolbar';
+import GridComponent from '../components/GridComponent';
 
 interface TransformedMetrics {
   answer: string;
@@ -20,10 +22,20 @@ interface TransformedMetrics {
   percentage: number;
 }
 
+interface MatrixCell {
+  row: string;
+  column: string;
+  userInput: string;
+  notes: Record<string, string>;
+}
+
 export default function AnalyticsDashboard() {
   const { isAuthenticated } = useAuth();
   const [activeView, setActiveView] = useState<DashboardView>('all');
+  const [activeTab, setActiveTab] = useState<string>('analytics');
   const [chartData, setChartData] = useState<TransformedMetrics[]>([]);
+  const [matrixData, setMatrixData] = useState<MatrixCell[]>([]);
+  const [pollType, setPollType] = useState<string>('');
   const [pollQuestion, setPollQuestion] = useState<string>('');
   const [totalResponses, setTotalResponses] = useState<number>(0);
   const [qOrder, setQOrder] = useState<string>('0');
@@ -31,6 +43,7 @@ export default function AnalyticsDashboard() {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [dateRange, setDateRange] = useState<{ start: string; end: string } | null>(null);
+  const [pollMetadata, setPollMetadata] = useState<string>('');
 
   useEffect(() => {
     async function initMetrics() {
@@ -49,6 +62,8 @@ export default function AnalyticsDashboard() {
           setPollQuestion(pollObj.question || '');
           setTotalResponses(totalCount);
           setUniqueVoters(voteResults.votercount || 0);
+          setPollType(pollObj.qtype || '');
+          setPollMetadata(pollObj.metadata || '');
 
           if (rawResponses.length > 0) {
             const timestamps = rawResponses
@@ -74,6 +89,47 @@ export default function AnalyticsDashboard() {
             }
           }
 
+          // Handle Matrix-type polls
+          if (pollObj.qtype === 'matrix' && rawResponses.length > 0) {
+            const matrixCellsMap = new Map<string, MatrixCell>();
+            rawResponses.forEach((response: any) => {
+              try {
+                // Parse the vote field which contains the actual matrix data
+                let matrixData = [];
+                if (typeof response.vote === 'string') {
+                  matrixData = JSON.parse(response.vote);
+                } else if (Array.isArray(response.vote)) {
+                  matrixData = response.vote;
+                }
+
+                // If matrixData is empty, try parsedvote as fallback
+                if (matrixData.length === 0 && response.parsedvote) {
+                  matrixData = Array.isArray(response.parsedvote)
+                    ? response.parsedvote
+                    : typeof response.parsedvote === 'string'
+                    ? JSON.parse(response.parsedvote)
+                    : [];
+                }
+
+                matrixData.forEach((cell: any) => {
+                  // Use row-column as key to avoid duplicates
+                  const key = `${cell.row}-${cell.column}`;
+                  if (!matrixCellsMap.has(key)) {
+                    matrixCellsMap.set(key, {
+                      row: cell.row || '',
+                      column: cell.column || '',
+                      userInput: cell.userInput || '',
+                      notes: cell.notes || {}
+                    });
+                  }
+                });
+              } catch (e) {
+                console.error('Error parsing matrix response:', e);
+              }
+            });
+            setMatrixData(Array.from(matrixCellsMap.values()));
+          }
+
           const cleanTransformedRows = rawVotesArray.map((item: any) => ({
             answer: item.vote || 'Unassigned Options',
             count: Number(item.count || 0),
@@ -95,14 +151,17 @@ export default function AnalyticsDashboard() {
 
   return (
     <div className="min-h-screen transition-colors duration-200">
-      <Header />
+      <Header activeTab={activeTab} onTabChange={setActiveTab} />
 
       <main className="p-4 md:p-8">
         <div className="max-w-7xl mx-auto relative glass border border-white/10 p-6 rounded-2xl shadow-[0_20px_80px_-20px_rgba(160,212,5,0.1)] transition-all duration-300 overflow-hidden">
           <div className="absolute top-0 left-0 right-0 h-[2px] aurora-seam" />
 
-          {/* Configuration Header */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 border-b border-white/10 pb-4">
+          {/* Analytics Tab */}
+          {activeTab === 'analytics' && (
+            <>
+              {/* Configuration Header */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 border-b border-white/10 pb-4">
               <div className="flex items-center gap-2.5">
                 <div className="relative w-6 h-6 rounded-full p-[1.5px] aurora-seam shrink-0">
                   <div className="flex items-center justify-center w-full h-full rounded-full bg-void-2 text-[11px] font-bold text-ink font-mono">
@@ -186,17 +245,36 @@ export default function AnalyticsDashboard() {
                 </div>
               )}
 
+              {/* Matrix View Segment — Hidden on Reset, only renders when explicitly selected */}
+              {activeView === 'matrix' && matrixData.length > 0 && (
+                <div className="w-full lg:col-span-3 glass border border-white/10 p-4 rounded-xl hover:shadow-[0_0_35px_-12px_rgba(160,212,5,0.15)] transition duration-200">
+                  <MatrixAnalyticsCard 
+                    data={matrixData} 
+                    pollQuestion={pollQuestion}
+                  />
+                </div>
+              )}
+
               {/* Data Table Section — Spans beautifully based on active view state filter configuration */}
-              <div className={`w-full glass border border-white/10 p-4 rounded-xl ${
-                activeView !== 'all' ? 'lg:col-span-2' : 'w-full'
-              }`}>
-                <DataTable data={chartData} />
-              </div>
+              {pollType !== 'matrix' && (
+                <div className={`w-full glass border border-white/10 p-4 rounded-xl ${
+                  activeView !== 'all' ? 'lg:col-span-2' : 'w-full'
+                }`}>
+                  <DataTable data={chartData} />
+                </div>
+              )}
 
             </div>
           )}
 
           <Toolbar onViewChange={setActiveView} currentView={activeView} data={chartData} />
+            </>
+          )}
+
+          {/* Grid Component Tab */}
+          {activeTab === 'grid' && (
+            <GridComponent matrixData={matrixData} pollMetadata={pollMetadata} />
+          )}
         </div>
       </main>
 
