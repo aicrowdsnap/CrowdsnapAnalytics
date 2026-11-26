@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   Plus,
   Eye,
@@ -22,9 +22,12 @@ import {
   Sparkles,
   Check,
   X,
+  Download,
+  Loader2,
 } from 'lucide-react';
+import { listSavedGrids, getGridDataById } from '@/services/api';
 
-type ActiveTab = 'create' | 'preview';
+type ActiveTab = 'create' | 'preview' | 'load';
 
 export type GridFieldType =
   | 'selection'
@@ -189,6 +192,11 @@ export default function GuideComponent() {
   const [previewAnswers, setPreviewAnswers] = useState<Record<string, any>>({});
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
+  // Database Grids Loading State
+  const [dbGrids, setDbGrids] = useState<any[]>([]);
+  const [isLoadingGrids, setIsLoadingGrids] = useState(false);
+  const [gridSearchQuery, setGridSearchQuery] = useState('');
+
   // Header image upload refs
   const headerImageInputRef = useRef<HTMLInputElement>(null);
   const [uploadTarget, setUploadTarget] = useState<{ axis: 'row' | 'col'; id: string } | null>(null);
@@ -196,6 +204,90 @@ export default function GuideComponent() {
   const showToast = (msg: string) => {
     setToastMessage(msg);
     setTimeout(() => setToastMessage(null), 2600);
+  };
+
+  // Load grids from database
+  useEffect(() => {
+    if (activeTab === 'load') {
+      loadGridsFromDatabase();
+    }
+  }, [activeTab]);
+
+  const loadGridsFromDatabase = async () => {
+    setIsLoadingGrids(true);
+    try {
+      const result = await listSavedGrids({
+        search: gridSearchQuery || undefined,
+        limit: 50,
+      });
+      setDbGrids(result.grids || []);
+      if (result.grids?.length === 0) {
+        showToast('No grids found in database');
+      }
+    } catch (error) {
+      showToast(`Error loading grids: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('Load error:', error);
+    } finally {
+      setIsLoadingGrids(false);
+    }
+  };
+
+  const handleLoadGridFromDB = async (gridId: string, gridName: string) => {
+    try {
+      setIsLoadingGrids(true);
+      const result = await getGridDataById({ gridId });
+
+      if (result.grid) {
+        const { gridType, metadata } = result.grid;
+        
+        // Convert to local grid format
+        const localGrid: SavedGrid = {
+          id: gridId,
+          title: gridName,
+          gridType: gridType as any,
+          options: metadata.columns || [],
+          columns: (metadata.columns || []).map((col: string, idx: number) => ({
+            id: `col-${idx}`,
+            label: col,
+            customType: 'text' as const,
+          })),
+          rows: (metadata.rows || []).map((row: string, idx: number) => ({
+            id: `row-${idx}`,
+            label: row,
+          })),
+          enabledCells: {},
+          showOptionLabels: true,
+          required: false,
+          createdAt: new Date().toLocaleString(),
+        };
+
+        // Build enabled cells map
+        const enableMap: Record<string, boolean> = {};
+        localGrid.rows.forEach((r) => {
+          localGrid.columns.forEach((c) => {
+            enableMap[`${r.id}:${c.id}`] = true;
+          });
+        });
+        localGrid.enabledCells = enableMap;
+
+        // Load into builder
+        setQuestionTitle(localGrid.title);
+        setGridType(localGrid.gridType);
+        setSelectionOptions(localGrid.options);
+        setColumns(localGrid.columns);
+        setRows(localGrid.rows);
+        setEnabledCells(localGrid.enabledCells);
+        setShowOptionLabels(localGrid.showOptionLabels);
+        setRequired(localGrid.required);
+        setActiveTab('create');
+        showToast(`✓ Loaded "${gridName}" into editor`);
+      }
+    } catch (error) {
+      showToast(`Error loading grid: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('Load error:', error);
+    } finally {
+      setIsLoadingGrids(false);
+    }
   };
 
   // --- Column & Row Mutations ---
@@ -328,7 +420,7 @@ export default function GuideComponent() {
   };
 
   // --- Save / Reset / Duplicate ---
-  const handleSaveGrid = () => {
+  const handleSaveGrid = async () => {
     if (!questionTitle.trim()) {
       showToast('Please enter a Question Title before creating.');
       return;
@@ -353,10 +445,63 @@ export default function GuideComponent() {
       createdAt: new Date().toLocaleString(),
     };
 
-    setSavedGrids((prev) => [newGrid, ...prev]);
-    setPreviewAnswers({});
-    setActiveTab('preview');
-    showToast('Grid created! Viewing respondent preview.');
+    // Convert grid data to MatrixCell format for database
+    const matrixCells: Array<{
+      row: string;
+      column: string;
+      userInput?: boolean;
+      notes?: Record<string, any> | string;
+    }> = [];
+
+    rows.forEach((row) => {
+      columns.forEach((col) => {
+        const cellKey = `${row.id}:${col.id}`;
+        const isEnabled = enabledCells[cellKey] ?? true;
+
+        if (isEnabled) {
+          matrixCells.push({
+            row: row.label,
+            column: col.label,
+            userInput: false,
+            notes: {
+              gridType,
+              optionIndex: selectionOptions.indexOf(col.label),
+            },
+          });
+        }
+      });
+    });
+
+    // Save to database
+    try {
+      const response = await fetch('/api/grid/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          gridId: `grid_${newGrid.id}`,
+          gridName: questionTitle.trim(),
+          gridType: gridType,
+          columns: columns.map((c) => c.label),
+          rows: rows.map((r) => r.label),
+          cells: matrixCells,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        showToast(`Failed to save: ${error.error}`);
+        return;
+      }
+
+      const saveResult = await response.json();
+      setSavedGrids((prev) => [newGrid, ...prev]);
+      setPreviewAnswers({});
+      setActiveTab('preview');
+      showToast(`✓ Grid saved! (${saveResult.cellCount} cells)`);
+    } catch (error) {
+      showToast(`Error saving grid: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('Save error:', error);
+    }
   };
 
   const handleLoadIntoBuilder = (grid: SavedGrid) => {
@@ -707,6 +852,23 @@ export default function GuideComponent() {
             {savedGrids.length > 0 && (
               <span className="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-[var(--color-neon-teal)]/20 text-[var(--color-neon-teal)]">
                 {savedGrids.length}
+              </span>
+            )}
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('load')}
+            className={`flex items-center gap-2 px-5 py-3.5 text-xs font-display font-bold uppercase tracking-wider transition border-b-2 ${
+              activeTab === 'load'
+                ? 'border-[var(--color-neon-lime)] text-[var(--color-neon-lime)] bg-[var(--color-neon-lime)]/10'
+                : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
+            }`}
+          >
+            <Download className="w-4 h-4" />
+            Load Grids
+            {dbGrids.length > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-[var(--color-neon-lime)]/20 text-[var(--color-neon-lime)]">
+                {dbGrids.length}
               </span>
             )}
           </button>
@@ -1320,6 +1482,111 @@ export default function GuideComponent() {
               ))}
             </div>
           )}
+        </div>
+      )}
+
+      {/* ==================== LOAD GRIDS TAB ==================== */}
+      {activeTab === 'load' && (
+        <div className="p-6 space-y-6">
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <span className="inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[var(--color-neon-lime)]/15 text-[var(--color-neon-lime)] border border-[var(--color-neon-lime)]/30 mb-1.5">
+                  <Download className="w-3 h-3" />
+                  Database
+                </span>
+                <h3 className="text-lg font-display font-bold text-[var(--color-ink)]">
+                  Load Saved Grids
+                </h3>
+                <p className="text-xs text-[var(--color-ink-muted)] mt-1">
+                  Browse and load previously saved grids from the database
+                </p>
+              </div>
+            </div>
+
+            {/* Search Bar */}
+            <div className="flex gap-2">
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  placeholder="Search grids by name..."
+                  value={gridSearchQuery}
+                  onChange={(e) => setGridSearchQuery(e.target.value)}
+                  className="w-full px-4 py-2.5 rounded-xl bg-[var(--color-void-2)] border border-[var(--color-border)] text-sm text-[var(--color-ink)] placeholder:text-[var(--color-ink-muted)]/60 focus:outline-none focus:border-[var(--color-neon-lime)] transition"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={loadGridsFromDatabase}
+                disabled={isLoadingGrids}
+                className="px-4 py-2.5 bg-[var(--color-neon-lime)] text-black rounded-xl font-semibold hover:bg-[var(--color-neon-lime)]/90 disabled:opacity-50 transition flex items-center gap-2"
+              >
+                {isLoadingGrids ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    <Download className="w-4 h-4" />
+                    Refresh
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          {/* Grids List */}
+          <div className="space-y-3">
+            {isLoadingGrids ? (
+              <div className="flex items-center justify-center min-h-[200px]">
+                <div className="flex flex-col items-center gap-3">
+                  <Loader2 className="w-8 h-8 animate-spin text-[var(--color-neon-lime)]" />
+                  <p className="text-xs text-[var(--color-ink-muted)]">Loading grids from database...</p>
+                </div>
+              </div>
+            ) : dbGrids.length === 0 ? (
+              <div className="p-8 rounded-xl border border-dashed border-[var(--color-border)] text-center">
+                <p className="text-sm text-[var(--color-ink-muted)]">No grids found</p>
+                <p className="text-xs text-[var(--color-ink-muted)]/60 mt-1">Create a grid in the Grid Builder tab first</p>
+              </div>
+            ) : (
+              dbGrids.map((grid) => (
+                <div
+                  key={grid.grid_id}
+                  className="p-5 rounded-xl border border-[var(--color-border)] bg-[var(--color-void-2)]/50 hover:bg-[var(--color-void-2)] transition space-y-3"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-sm font-bold text-[var(--color-ink)] truncate">
+                        {grid.grid_name}
+                      </h4>
+                      <p className="text-[11px] text-[var(--color-ink-muted)] mt-1 space-y-1">
+                        <span className="block">
+                          Type: <span className="capitalize text-[var(--color-neon-lime)]">{grid.grid_type}</span>
+                        </span>
+                        <span className="block">
+                          {grid.rows_count} rows × {grid.columns_count} columns • {grid.total_cells} cells
+                        </span>
+                        <span className="block font-mono text-[var(--color-ink-muted)]/50">
+                          Created: {new Date(grid.created_at).toLocaleDateString()}
+                        </span>
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleLoadGridFromDB(grid.grid_id, grid.grid_name)}
+                      disabled={isLoadingGrids}
+                      className="px-4 py-2 rounded-lg border border-[var(--color-neon-lime)] bg-[var(--color-neon-lime)]/10 text-[var(--color-neon-lime)] hover:bg-[var(--color-neon-lime)]/20 disabled:opacity-50 text-xs font-semibold transition whitespace-nowrap"
+                    >
+                      Load
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
       )}
 
