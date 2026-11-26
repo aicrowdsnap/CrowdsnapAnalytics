@@ -1491,10 +1491,6 @@ export default function GuideComponent() {
           <div className="space-y-3">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
-                <span className="inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[var(--color-neon-lime)]/15 text-[var(--color-neon-lime)] border border-[var(--color-neon-lime)]/30 mb-1.5">
-                  <Download className="w-3 h-3" />
-                  Database
-                </span>
                 <h3 className="text-lg font-display font-bold text-[var(--color-ink)]">
                   Load Saved Grids
                 </h3>
