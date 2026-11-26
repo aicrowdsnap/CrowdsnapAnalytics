@@ -145,7 +145,10 @@ export default function GridComponentEnhanced({
         gridType: isMultiType ? 'multi' : isCheckboxMatrix ? 'checkbox' : 'text',
         columns,
         rows,
-        cells: matrixData,
+        cells: matrixData.map(cell => ({
+          ...cell,
+          userInput: cell.userInput === true || cell.userInput === 'true' ? true : false
+        })),
         responseId,
         responseDateTime,
         responseIp,

@@ -5,6 +5,8 @@ export async function GET(request: NextRequest) {
   try {
     const { pool } = await import('@/lib/db');
     
+    const dbName = process.env.DB_NAME || 'crowdsnap_analytics';
+    
     // Test connection
     const connection = await pool.getConnection();
     console.log('✓ Database connection successful');
@@ -16,12 +18,12 @@ export async function GET(request: NextRequest) {
       WHERE TABLE_SCHEMA = ? AND TABLE_NAME IN ('grid_data', 'grid_rows', 'grid_cells')
     `;
     
-    const [tables] = await connection.execute(tableCheckQuery, [process.env.DB_NAME]);
+    const [tables] = await connection.execute(tableCheckQuery, [dbName] as any);
     console.log('Tables found:', tables);
     
     // Try to count grids
     const countQuery = `SELECT COUNT(*) as count FROM grid_data`;
-    const [countResult] = await connection.execute(countQuery);
+    const [countResult] = await connection.execute(countQuery, [] as any);
     console.log('Grid count:', countResult);
     
     connection.release();
@@ -30,7 +32,7 @@ export async function GET(request: NextRequest) {
       {
         success: true,
         message: 'Database is working',
-        db_name: process.env.DB_NAME,
+        db_name: dbName,
         tables_found: tables,
         grid_count: countResult,
       },

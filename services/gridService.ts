@@ -228,7 +228,7 @@ export function matrixCellsToGridCellData(
     grid_id: gridId,
     row_name: cell.row,
     column_name: cell.column,
-    user_input: cell.userInput,
+    user_input: cell.userInput === true || cell.userInput === 'true' ? true : false,
     notes: cell.notes,
     response_id: responseId,
     response_datetime: responseDateTime,
