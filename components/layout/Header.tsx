@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Menu, LogIn, LogOut, User, Sun, Moon } from 'lucide-react';
-import { useAuth } from './AuthContext';
+import { useAuth } from '../auth/AuthContext';
 import { useTheme } from './ThemeContext';
 
 interface HeaderProps {

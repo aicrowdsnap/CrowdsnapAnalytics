@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
-import { useTheme } from './ThemeContext';
+import { useTheme } from '../layout/ThemeContext';
 
 interface ChartItem {
   answer: string;

@@ -1,4 +1,3 @@
-// Fetch Analytics Data via your new secure local server proxy
 export async function fetchAnalyticsData() {
   const currentQueryString = typeof window !== 'undefined' ? window.location.search : '';
   const response = await fetch(`/api/analytics${currentQueryString}`, { 
@@ -15,7 +14,7 @@ export async function fetchAnalyticsData() {
 
 // Manual User Authentication (Stays on client side since user inputs these)
 export async function authenticateUser(email: string, password: string) {
-  const response = await fetch('https://crowdsnap-api-qa2.azurewebsites.net/api/client/auth', {
+  const response = await fetch('https://crowdsnap.ai/api/client/auth', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ email, password, issocial: true }),
@@ -26,7 +25,7 @@ export async function authenticateUser(email: string, password: string) {
 
 // User Verification OTP Handshake
 export async function verifyOtp(otp: string, userid: string) {
-  const response = await fetch('https://crowdsnap-api-qa2.azurewebsites.net/api/client/otp', {
+  const response = await fetch('https://crowdsnap.ai/api/client/otp', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ otp, userid }),

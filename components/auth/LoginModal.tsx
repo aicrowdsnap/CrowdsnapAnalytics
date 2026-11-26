@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useAuth } from './AuthContext';
-import { authenticateUser } from '../services/api';
+import { authenticateUser } from '../../services/api';
 
 export default function LoginModal() {
   const { currentStep, setStep, setPendingUser } = useAuth();

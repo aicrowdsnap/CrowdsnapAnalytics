@@ -1,21 +1,22 @@
+// app/page.tsx
 'use client';
 
 import React, { useState, useEffect } from 'react';
 import { Edit3, Loader2, BarChart2, Users, Calendar } from 'lucide-react';
-import { useAuth } from '../components/AuthContext';
+import { useAuth } from '../components/auth/AuthContext';
 import { fetchAnalyticsData } from '../services/api';
-import Header from '../components/Header';
-import LoginModal from '../components/LoginModal';
-import OtpModal from '../components/OtpModal';
-import PieChartCard from '../components/PieChartCard';
-import DataTable from '../components/DataTable';
-import BarChartCard from '../components/BarChartCard';
-import LineChartCard from '../components/LineChartCard';
-import RadarChartCard from '../components/RadarChartCard';
-import MatrixAnalyticsCard from '../components/MatrixAnalyticsCard';
-import Toolbar, { DashboardView } from '../components/Toolbar';
-import GridComponent from '../components/GridComponent';
-import GuideComponent from '../components/GuideComponent';
+import Header from '../components/layout/Header';
+import LoginModal from '../components/auth/LoginModal';
+import OtpModal from '../components/auth/OtpModal';
+import PieChartCard from '../components/charts/PieChartCard';
+import DataTable from '../components/charts/DataTable';
+import BarChartCard from '../components/charts/BarChartCard';
+import LineChartCard from '../components/charts/LineChartCard';
+import RadarChartCard from '../components/charts/RadarChartCard';
+import MatrixAnalyticsCard from '../components/charts/MatrixAnalyticsCard';
+import Toolbar, { DashboardView } from '../components/layout/Toolbar';
+import GridComponent from '../components/grid/GridComponent';
+import GuideComponent from '../components/grid/GuideComponent';
 import { MatrixCell } from '../types/matrix';
 
 interface TransformedMetrics {
@@ -30,7 +31,9 @@ export default function AnalyticsDashboard() {
   const [activeTab, setActiveTab] = useState<string>('analytics');
   const [chartData, setChartData] = useState<TransformedMetrics[]>([]);
   const [matrixData, setMatrixData] = useState<MatrixCell[]>([]);
-  const [responsesList, setResponsesList] = useState<Array<{ vote: string; datetime?: string; ip?: string; guid?: string }>>([]);
+  const [responsesList, setResponsesList] = useState<
+    Array<{ vote: string; datetime?: string; ip?: string; guid?: string }>
+  >([]);
   const [pollType, setPollType] = useState<string>('');
   const [pollQuestion, setPollQuestion] = useState<string>('');
   const [totalResponses, setTotalResponses] = useState<number>(0);
@@ -46,7 +49,7 @@ export default function AnalyticsDashboard() {
       try {
         setLoading(true);
         const displayPayload = await fetchAnalyticsData();
-        
+
         if (displayPayload?.success && displayPayload?.poll) {
           const pollObj = displayPayload.poll;
           const voteResults = pollObj.voteresults || {};
@@ -61,7 +64,6 @@ export default function AnalyticsDashboard() {
           setPollType(pollObj.qtype || '');
           setPollMetadata(pollObj.metadata || '');
 
-          // Automatically switch to grid tab for matrix-type questions
           if (pollObj.qtype === 'matrix') {
             setActiveTab('grid');
           }
@@ -74,109 +76,79 @@ export default function AnalyticsDashboard() {
             if (timestamps.length > 0) {
               const minDate = new Date(Math.min(...timestamps));
               const maxDate = new Date(Math.max(...timestamps));
-              
-              const formatter = new Intl.DateTimeFormat('en-US', { 
+
+              const formatter = new Intl.DateTimeFormat('en-US', {
                 year: 'numeric',
-                month: 'short', 
-                day: 'numeric', 
-                hour: '2-digit', 
-                minute: '2-digit' 
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
               });
 
               setDateRange({
                 start: formatter.format(minDate),
-                end: formatter.format(maxDate)
+                end: formatter.format(maxDate),
               });
             }
           }
 
-          // Handle Matrix-type polls
           if (pollObj.qtype === 'matrix' && rawResponses.length > 0) {
-            console.log('===== MATRIX DATA PROCESSING =====');
-            console.log('Total responses to process:', rawResponses.length);
-            console.log('Raw responses:', rawResponses);
-            
-            // Store responses list for multi-type handling
             const responsesData = rawResponses.map((resp: any) => ({
               vote: resp.vote,
               datetime: resp.datetime,
               ip: resp.ip,
-              guid: resp.guid
+              guid: resp.guid,
             }));
             setResponsesList(responsesData);
-            
+
             const matrixCellsArray: MatrixCell[] = [];
-            let successCount = 0;
-            let errorCount = 0;
-            
+
             rawResponses.forEach((response: any, responseIdx: number) => {
               try {
-                // Parse the vote field which contains the actual matrix data
                 let matrixData = [];
-                console.log(`\n--- Processing Response ${responseIdx} ---`);
-                console.log('Raw vote:', response.vote);
-                
+
                 if (typeof response.vote === 'string') {
                   matrixData = JSON.parse(response.vote);
-                  console.log('Parsed from string:', matrixData);
                 } else if (Array.isArray(response.vote)) {
                   matrixData = response.vote;
-                  console.log('Already an array:', matrixData);
                 }
 
-                // If matrixData is empty, try parsedvote as fallback
                 if (matrixData.length === 0 && response.parsedvote) {
                   matrixData = Array.isArray(response.parsedvote)
                     ? response.parsedvote
                     : typeof response.parsedvote === 'string'
                     ? JSON.parse(response.parsedvote)
                     : [];
-                  console.log('Used parsedvote fallback:', matrixData);
                 }
 
-                console.log(`Response ${responseIdx} has ${matrixData.length} items`);
-
-                matrixData.forEach((cell: any, cellIndex: number) => {
+                matrixData.forEach((cell: any) => {
                   let noteValue: any = cell.notes || {};
-                  
+
                   if (typeof cell.notes === 'object' && !Array.isArray(cell.notes)) {
                     noteValue = cell.notes;
                   } else if (typeof cell.notes === 'string') {
                     noteValue = cell.notes;
                   }
-                  
-                  const newCell: MatrixCell = {
+
+                  matrixCellsArray.push({
                     row: cell.row || '',
                     column: cell.column || 'Value',
                     userInput: cell.userInput || false,
-                    notes: noteValue
-                  };
-                  
-                  matrixCellsArray.push(newCell);
-                  console.log(`  Added: row="${newCell.row}", notes="${noteValue}"`);
+                    notes: noteValue,
+                  });
                 });
-                
-                successCount++;
               } catch (e) {
-                errorCount++;
                 console.error(`ERROR in Response ${responseIdx}:`, e);
               }
             });
-            
-            console.log('===== FINAL RESULT =====');
-            console.log('Successful responses:', successCount);
-            console.log('Failed responses:', errorCount);
-            console.log('Total matrix cells:', matrixCellsArray.length);
-            console.log('Matrix cells array:', matrixCellsArray);
-            console.log('================');
-            
+
             setMatrixData(matrixCellsArray);
           }
 
           const cleanTransformedRows = rawVotesArray.map((item: any) => ({
             answer: item.vote || 'Unassigned Options',
             count: Number(item.count || 0),
-            percentage: totalCount > 0 ? parseFloat(((item.count / totalCount) * 100).toFixed(1)) : 0
+            percentage: totalCount > 0 ? parseFloat(((item.count / totalCount) * 100).toFixed(1)) : 0,
           }));
 
           setChartData(cleanTransformedRows);
@@ -192,141 +164,136 @@ export default function AnalyticsDashboard() {
     initMetrics();
   }, []);
 
+  const isFullWidthTab = activeTab === 'guide';
+
   return (
     <div className="min-h-screen transition-colors duration-200">
       <Header activeTab={activeTab} onTabChange={setActiveTab} />
 
-      <main className="p-4 md:p-8">
-        <div className="max-w-7xl mx-auto relative glass border border-white/10 p-6 rounded-2xl shadow-[0_20px_80px_-20px_rgba(160,212,5,0.1)] transition-all duration-300 overflow-hidden">
+      <main className={isFullWidthTab ? 'p-4 md:px-6 md:py-6' : 'p-4 md:p-8'}>
+        <div
+          className={`${
+            isFullWidthTab ? 'w-full' : 'max-w-7xl mx-auto'
+          } relative glass border border-white/10 p-6 rounded-2xl shadow-[0_20px_80px_-20px_rgba(160,212,5,0.1)] transition-all duration-300 overflow-hidden`}
+        >
           <div className="absolute top-0 left-0 right-0 h-[2px] aurora-seam" />
 
           {/* Analytics Tab */}
           {activeTab === 'analytics' && (
             <>
-              {/* Configuration Header */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 border-b border-white/10 pb-4">
-              <div className="flex items-center gap-2.5">
-                <div className="relative w-6 h-6 rounded-full p-[1.5px] aurora-seam shrink-0">
-                  <div className="flex items-center justify-center w-full h-full rounded-full bg-void-2 text-[11px] font-bold text-ink font-mono">
-                    {qOrder}
+                <div className="flex items-center gap-2.5">
+                  <div className="relative w-6 h-6 rounded-full p-[1.5px] aurora-seam shrink-0">
+                    <div className="flex items-center justify-center w-full h-full rounded-full bg-void-2 text-[11px] font-bold text-ink font-mono">
+                      {qOrder}
+                    </div>
                   </div>
-                </div>
-                <div>
-                  <h2 className="text-base font-display font-bold text-ink tracking-tight">{pollQuestion}</h2>
-                  <div className="flex flex-wrap items-center gap-3 mt-1 text-[11px] text-ink-muted">
-                    <span className="flex items-center gap-1">
-                      <BarChart2 className="w-3 h-3 text-neon-teal" /> Responses: <strong className="text-ink">{totalResponses}</strong>
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <Users className="w-3 h-3 text-neon-lime" /> Participants: <strong className="text-ink">{uniqueVoters}</strong>
-                    </span>
-                    {dateRange && (
-                      <span className="flex items-center gap-1 sm:ml-2 sm:pl-2 sm:border-l border-white/10">
-                        <Calendar className="w-3 h-3 text-neon-lime/70" /> 
-                        <strong className="text-ink">{dateRange.start} - {dateRange.end}</strong>
+                  <div>
+                    <h2 className="text-base font-display font-bold text-ink tracking-tight">{pollQuestion}</h2>
+                    <div className="flex flex-wrap items-center gap-3 mt-1 text-[11px] text-ink-muted">
+                      <span className="flex items-center gap-1">
+                        <BarChart2 className="w-3 h-3 text-neon-teal" /> Responses:{' '}
+                        <strong className="text-ink">{totalResponses}</strong>
                       </span>
-                    )}
+                      <span className="flex items-center gap-1">
+                        <Users className="w-3 h-3 text-neon-lime" /> Participants:{' '}
+                        <strong className="text-ink">{uniqueVoters}</strong>
+                      </span>
+                      {dateRange && (
+                        <span className="flex items-center gap-1 sm:ml-2 sm:pl-2 sm:border-l border-white/10">
+                          <Calendar className="w-3 h-3 text-neon-lime/70" />
+                          <strong className="text-ink">
+                            {dateRange.start} - {dateRange.end}
+                          </strong>
+                        </span>
+                      )}
+                    </div>
                   </div>
                 </div>
+
+                {isAuthenticated && (
+                  <button
+                    onClick={() => alert('Layout designer interface workspace initialized.')}
+                    className="group relative rounded-lg p-[1px] aurora-seam shadow-[0_0_25px_-8px_rgba(160,212,5,0.4)] hover:shadow-[0_0_35px_-6px_rgba(44,158,75,0.5)] active:scale-95 transition"
+                  >
+                    <span className="flex items-center gap-1.5 px-3 py-1.5 bg-void-2/90 group-hover:bg-void-2/70 rounded-[7px] text-xs font-semibold text-ink transition">
+                      <Edit3 className="w-3.5 h-3.5 text-neon-lime" /> Edit Layout
+                    </span>
+                  </button>
+                )}
               </div>
 
-            {/* Privilege Control Action Button */}
-            {isAuthenticated && (
-              <button
-                onClick={() => alert('Layout designer interface workspace initialized.')}
-                className="group relative rounded-lg p-[1px] aurora-seam shadow-[0_0_25px_-8px_rgba(160,212,5,0.4)] hover:shadow-[0_0_35px_-6px_rgba(44,158,75,0.5)] active:scale-95 transition"
-              >
-                <span className="flex items-center gap-1.5 px-3 py-1.5 bg-void-2/90 group-hover:bg-void-2/70 rounded-[7px] text-xs font-semibold text-ink transition">
-                  <Edit3 className="w-3.5 h-3.5 text-neon-lime" /> Edit Layout
-                </span>
-              </button>
-            )}
-          </div>
+              {loading ? (
+                <div className="flex flex-col items-center justify-center min-h-[300px] gap-3">
+                  <Loader2 className="w-8 h-8 animate-spin text-neon-lime" />
+                  <p className="text-xs text-ink-muted font-mono">Synchronizing workspace analytical records...</p>
+                </div>
+              ) : error ? (
+                <div className="flex items-center justify-center min-h-[300px]">
+                  <div className="bg-red-500/10 text-red-400 text-xs p-4 rounded-xl border border-red-500/20 max-w-md text-center">
+                    <p className="font-semibold mb-1">Data Stream Connection Exception</p>
+                    <p className="opacity-80">{error}</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start min-h-[250px]">
+                  {(activeView === 'all' || activeView === 'pie') && (
+                    <div className="w-full glass border border-white/10 p-4 rounded-xl hover:shadow-[0_0_35px_-12px_rgba(163,212,5,0.15)] transition duration-200">
+                      <PieChartCard data={chartData} />
+                    </div>
+                  )}
 
-          {/* Interactive Core Metrics Shell Container Matrix */}
-          {loading ? (
-            <div className="flex flex-col items-center justify-center min-h-[300px] gap-3">
-              <Loader2 className="w-8 h-8 animate-spin text-neon-lime" />
-              <p className="text-xs text-ink-muted font-mono">Synchronizing workspace analytical records...</p>
-            </div>
-          ) : error ? (
-            <div className="flex items-center justify-center min-h-[300px]">
-              <div className="bg-red-500/10 text-red-400 text-xs p-4 rounded-xl border border-red-500/20 max-w-md text-center">
-                <p className="font-semibold mb-1">Data Stream Connection Exception</p>
-                <p className="opacity-80">{error}</p>
-              </div>
-            </div>
-          ) : (
-            /* Standardized 3-Column Base Grid System */
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start min-h-[250px]">
-              
-              {/* Pie View Segment — Visible during Reset (all) and explicit filtering */}
-              {(activeView === 'all' || activeView === 'pie') && (
-                <div className="w-full glass border border-white/10 p-4 rounded-xl hover:shadow-[0_0_35px_-12px_rgba(163,212,5,0.15)] transition duration-200">
-                  <PieChartCard data={chartData} />
+                  {(activeView === 'all' || activeView === 'bar') && (
+                    <div className="w-full glass border border-white/10 p-4 rounded-xl hover:shadow-[0_0_35px_-12px_rgba(44,158,75,0.15)] transition duration-200">
+                      <BarChartCard data={chartData} />
+                    </div>
+                  )}
+
+                  {activeView === 'line' && (
+                    <div className="w-full glass border border-white/10 p-4 rounded-xl hover:shadow-[0_0_35px_-12px_rgba(163,212,5,0.15)] transition duration-200">
+                      <LineChartCard data={chartData} />
+                    </div>
+                  )}
+
+                  {activeView === 'radar' && (
+                    <div className="w-full glass border border-white/10 p-4 rounded-xl hover:shadow-[0_0_35px_-12px_rgba(18,179,168,0.15)] transition duration-200">
+                      <RadarChartCard data={chartData} />
+                    </div>
+                  )}
+
+                  {activeView === 'matrix' && matrixData.length > 0 && (
+                    <div className="w-full lg:col-span-3 glass border border-white/10 p-4 rounded-xl hover:shadow-[0_0_35px_-12px_rgba(160,212,5,0.15)] transition duration-200">
+                      <MatrixAnalyticsCard data={matrixData} pollQuestion={pollQuestion} />
+                    </div>
+                  )}
+
+                  {pollType !== 'matrix' && (
+                    <div
+                      className={`w-full glass border border-white/10 p-4 rounded-xl ${
+                        activeView !== 'all' ? 'lg:col-span-2' : 'w-full'
+                      }`}
+                    >
+                      <DataTable data={chartData} />
+                    </div>
+                  )}
                 </div>
               )}
 
-              {/* Bar View Segment — Visible during Reset (all) and explicit filtering */}
-              {(activeView === 'all' || activeView === 'bar') && (
-                <div className="w-full glass border border-white/10 p-4 rounded-xl hover:shadow-[0_0_35px_-12px_rgba(44,158,75,0.15)] transition duration-200">
-                  <BarChartCard data={chartData} />
-                </div>
-              )}
-
-              {/* Line View Segment — Hidden on Reset, only renders when explicitly selected */}
-              {activeView === 'line' && (
-                <div className="w-full glass border border-white/10 p-4 rounded-xl hover:shadow-[0_0_35px_-12px_rgba(163,212,5,0.15)] transition duration-200">
-                  <LineChartCard data={chartData} />
-                </div>
-              )}
-
-              {/* Radar View Segment — Hidden on Reset, only renders when explicitly selected */}
-              {activeView === 'radar' && (
-                <div className="w-full glass border border-white/10 p-4 rounded-xl hover:shadow-[0_0_35px_-12px_rgba(18,179,168,0.15)] transition duration-200">
-                  <RadarChartCard data={chartData} />
-                </div>
-              )}
-
-              {/* Matrix View Segment — Hidden on Reset, only renders when explicitly selected */}
-              {activeView === 'matrix' && matrixData.length > 0 && (
-                <div className="w-full lg:col-span-3 glass border border-white/10 p-4 rounded-xl hover:shadow-[0_0_35px_-12px_rgba(160,212,5,0.15)] transition duration-200">
-                  <MatrixAnalyticsCard 
-                    data={matrixData} 
-                    pollQuestion={pollQuestion}
-                  />
-                </div>
-              )}
-
-              {/* Data Table Section — Spans beautifully based on active view state filter configuration */}
-              {pollType !== 'matrix' && (
-                <div className={`w-full glass border border-white/10 p-4 rounded-xl ${
-                  activeView !== 'all' ? 'lg:col-span-2' : 'w-full'
-                }`}>
-                  <DataTable data={chartData} />
-                </div>
-              )}
-
-            </div>
-          )}
-
-          <Toolbar onViewChange={setActiveView} currentView={activeView} data={chartData} />
+              <Toolbar onViewChange={setActiveView} currentView={activeView} data={chartData} />
             </>
           )}
 
           {/* Grid Component Tab */}
           {activeTab === 'grid' && (
-            <GridComponent 
-              matrixData={matrixData} 
+            <GridComponent
+              matrixData={matrixData}
               pollMetadata={pollMetadata}
               responsesList={responsesList}
             />
           )}
 
-          {/* Guide Component Tab */}
-          {activeTab === 'guide' && (
-            <GuideComponent />
-          )}
+          {/* Grid Create / Preview Tab (Full Width) */}
+          {activeTab === 'guide' && <GuideComponent />}
         </div>
       </main>
 

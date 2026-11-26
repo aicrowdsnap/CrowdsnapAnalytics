@@ -2,7 +2,7 @@
 
 import React, { useMemo, useState } from 'react';
 import { Grid3x3, Check, X } from 'lucide-react';
-import { MatrixCell } from '../types/matrix';
+import { MatrixCell } from '../../types/matrix';
 
 interface GridComponentProps {
   matrixData?: MatrixCell[];

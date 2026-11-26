@@ -2,7 +2,7 @@
 
 import React, { useMemo } from 'react';
 import { Grid3x3, AlertCircle } from 'lucide-react';
-import { MatrixCell } from '../types/matrix';
+import { MatrixCell } from '../../types/matrix';
 
 interface MatrixAnalyticsCardProps {
   data: MatrixCell[];

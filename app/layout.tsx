@@ -1,6 +1,6 @@
 import './globals.css';
-import { AuthProvider } from '@/components/AuthContext';
-import { ThemeProvider } from '@/components/ThemeContext';
+import { AuthProvider } from '@/components/auth/AuthContext';
+import { ThemeProvider } from '@/components/layout/ThemeContext';
 import { Metadata } from 'next';
 
 export const metadata: Metadata = {

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from 'recharts';
-import { useTheme } from './ThemeContext';
+import { useTheme } from '../layout/ThemeContext';
 
 interface ChartItem {
   answer: string;

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { useAuth } from './AuthContext';
-import { verifyOtp } from '../services/api';
+import { verifyOtp } from '../../services/api';
 
 export default function OtpModal() {
   const { currentStep, setStep, pendingUserId, loginSuccess } = useAuth();
