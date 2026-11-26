@@ -191,6 +191,7 @@ export default function GuideComponent() {
   const [savedGrids, setSavedGrids] = useState<SavedGrid[]>([]);
   const [previewAnswers, setPreviewAnswers] = useState<Record<string, any>>({});
   const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isSubmittingResponse, setIsSubmittingResponse] = useState(false);
 
   // Database Grids Loading State
   const [dbGrids, setDbGrids] = useState<any[]>([]);
@@ -238,7 +239,7 @@ export default function GuideComponent() {
       const result = await getGridDataById({ gridId });
 
       if (result.grid) {
-        const { gridType, metadata } = result.grid;
+        const { gridType, metadata, cells } = result.grid;
         
         // Convert to local grid format
         const localGrid: SavedGrid = {
@@ -261,13 +262,32 @@ export default function GuideComponent() {
           createdAt: new Date().toLocaleString(),
         };
 
-        // Build enabled cells map
+        // Build enabled cells map based on actual saved cells
         const enableMap: Record<string, boolean> = {};
+        
+        // First, initialize all cells as disabled (not shown in template)
         localGrid.rows.forEach((r) => {
           localGrid.columns.forEach((c) => {
-            enableMap[`${r.id}:${c.id}`] = true;
+            enableMap[`${r.id}:${c.id}`] = false;
           });
         });
+
+        // Then, only enable cells that actually exist in the database
+        // (cells that were part of the grid template)
+        if (cells && Array.isArray(cells)) {
+          cells.forEach((cell: any) => {
+            // Find matching row and column by their labels
+            const matchingRow = localGrid.rows.find(r => r.label === cell.row);
+            const matchingCol = localGrid.columns.find(c => c.label === cell.column);
+            
+            if (matchingRow && matchingCol) {
+              const cellKey = `${matchingRow.id}:${matchingCol.id}`;
+              // Cell exists in database = it's part of the grid template
+              enableMap[cellKey] = true;
+            }
+          });
+        }
+
         localGrid.enabledCells = enableMap;
 
         // Load into builder
@@ -445,7 +465,9 @@ export default function GuideComponent() {
       createdAt: new Date().toLocaleString(),
     };
 
-    // Convert grid data to MatrixCell format for database
+    // Convert grid structure to MatrixCell format for database
+    // KEY FIX: Only save cells that exist in the grid (all with userInput: false initially)
+    // This establishes the grid template structure, not user responses
     const matrixCells: Array<{
       row: string;
       column: string;
@@ -458,13 +480,15 @@ export default function GuideComponent() {
         const cellKey = `${row.id}:${col.id}`;
         const isEnabled = enabledCells[cellKey] ?? true;
 
+        // Only save enabled cells - this defines which cells the form shows
         if (isEnabled) {
           matrixCells.push({
             row: row.label,
             column: col.label,
-            userInput: false,
+            userInput: false, // Grid template starts unchecked
             notes: {
               gridType,
+              isGridTemplate: true,
               optionIndex: selectionOptions.indexOf(col.label),
             },
           });
@@ -497,7 +521,7 @@ export default function GuideComponent() {
       setSavedGrids((prev) => [newGrid, ...prev]);
       setPreviewAnswers({});
       setActiveTab('preview');
-      showToast(`✓ Grid saved! (${saveResult.cellCount} cells)`);
+      showToast(`✓ Grid template saved! (${saveResult.cellCount} cells in structure)`);
     } catch (error) {
       showToast(`Error saving grid: ${error instanceof Error ? error.message : 'Unknown error'}`);
       console.error('Save error:', error);
@@ -1391,7 +1415,7 @@ export default function GuideComponent() {
       {activeTab === 'preview' && (
         <div className="p-6 space-y-8">
           {/* Active Draft Live Preview */}
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div>
                 <span className="inline-flex items-center gap-1.5 text-[10px] font-mono uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-[var(--color-neon-lime)]/15 text-[var(--color-neon-lime)] border border-[var(--color-neon-lime)]/30 mb-1.5">
@@ -1401,6 +1425,9 @@ export default function GuideComponent() {
                   {questionTitle || 'Untitled Grid Question'}
                   {required && <span className="text-red-400 ml-1">*</span>}
                 </h3>
+                <p className="text-xs text-[var(--color-ink-muted)] mt-2">
+                  Try filling out this grid. Click "Submit Response" to save your answers.
+                </p>
               </div>
               <button
                 type="button"
@@ -1424,6 +1451,101 @@ export default function GuideComponent() {
               },
               'draft'
             )}
+
+            {/* Submit Response Button */}
+            <div className="flex gap-3 pt-4">
+              <button
+                onClick={async () => {
+                  try {
+                    setIsSubmittingResponse(true);
+                    
+                    // Convert previewAnswers (which are row-column keys mapped to checkbox states) into MatrixCell format
+                    const responseMatrixCells: Array<{
+                      row: string;
+                      column: string;
+                      userInput: boolean;
+                      notes?: Record<string, any> | string;
+                    }> = [];
+
+                    rows.forEach((row) => {
+                      columns.forEach((col) => {
+                        const cellKey = `${row.id}:${col.id}`;
+                        const isCellEnabled = enabledCells[cellKey] ?? true;
+
+                        if (isCellEnabled) {
+                          // Look up the user's response for this cell
+                          const userAnswer = previewAnswers[`draft:${cellKey}`];
+                          
+                          // Only save cells that the user actually checked (userInput = true)
+                          // This way we only store user responses, not the template
+                          if (userAnswer === true) {
+                            responseMatrixCells.push({
+                              row: row.label,
+                              column: col.label,
+                              userInput: true,
+                              notes: {
+                                gridType,
+                                isUserResponse: true,
+                              },
+                            });
+                          }
+                        }
+                      });
+                    });
+
+                    // Save response with a unique ID to avoid conflicts with template
+                    const responseId = `response_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                    const response = await fetch('/api/grid/save', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        gridId: responseId,
+                        gridName: `${questionTitle} - Response @ ${new Date().toLocaleTimeString()}`,
+                        gridType: gridType,
+                        columns: columns.map((c) => c.label),
+                        rows: rows.map((r) => r.label),
+                        cells: responseMatrixCells,
+                      }),
+                    });
+
+                    if (!response.ok) {
+                      const error = await response.json();
+                      showToast(`Failed to save response: ${error.error}`);
+                      return;
+                    }
+
+                    const result = await response.json();
+                    showToast(`✓ Response saved! (${result.cellCount} cells checked)`);
+                    setPreviewAnswers({}); // Clear preview answers after save
+                  } catch (error) {
+                    showToast(`Error saving response: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                  } finally {
+                    setIsSubmittingResponse(false);
+                  }
+                }}
+                disabled={isSubmittingResponse}
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-[var(--color-neon-lime)] text-black rounded-lg font-semibold hover:bg-[var(--color-neon-lime)]/90 disabled:opacity-50 transition text-xs"
+              >
+                {isSubmittingResponse ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" />
+                    Submit Response
+                  </>
+                )}
+              </button>
+              <button
+                onClick={() => setPreviewAnswers({})}
+                disabled={Object.keys(previewAnswers).length === 0}
+                className="px-4 py-2.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-void-2)] hover:bg-[var(--color-surface-hover)] text-xs font-semibold text-[var(--color-ink)] disabled:opacity-50 transition"
+              >
+                Clear
+              </button>
+            </div>
           </div>
 
           {/* Saved Grids List */}

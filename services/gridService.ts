@@ -89,17 +89,24 @@ export async function saveGridRows(gridId: string, rows: string[]): Promise<bool
   }
 }
 
-// Save grid cells
+// Save grid cells - ONLY save cells where user has actually checked (userInput = true)
 export async function saveGridCells(cells: GridCellData[]): Promise<boolean> {
   try {
-    if (cells.length === 0) return true;
+    // Filter to only save cells where user_input is explicitly true
+    // Don't save unchecked cells to avoid database bloat and confusion
+    const cellsToSave = cells.filter(cell => cell.user_input === true);
     
-    const values = cells.flatMap(cell => [
+    if (cellsToSave.length === 0) {
+      // If no cells are checked, still success but no rows inserted
+      return true;
+    }
+    
+    const values = cellsToSave.flatMap(cell => [
       cell.grid_id,
       cell.row_name,
       cell.column_name,
       cell.cell_value || null,
-      cell.user_input || false,
+      true, // Always true since we filtered
       cell.notes ? JSON.stringify(cell.notes) : null,
       cell.response_id || null,
       cell.response_datetime || null,
@@ -107,7 +114,7 @@ export async function saveGridCells(cells: GridCellData[]): Promise<boolean> {
       cell.response_guid || null
     ]);
     
-    const placeholders = cells.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').join(',');
+    const placeholders = cellsToSave.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)').join(',');
     
     const query = `
       INSERT INTO grid_cells 
@@ -235,4 +242,20 @@ export function matrixCellsToGridCellData(
     response_ip: responseIp,
     response_guid: responseGuid
   }));
+}
+
+// Get only user response cells (cells where userInput = true or isUserResponse flag is set)
+export async function getGridResponses(gridId: string): Promise<SearchResult[]> {
+  try {
+    const query = `
+      SELECT * FROM grid_cells 
+      WHERE grid_id = ? AND user_input = true
+      ORDER BY created_at DESC
+    `;
+    const results = await executeQuery<SearchResult[]>(query, [gridId]);
+    return results;
+  } catch (error) {
+    console.error('Error getting grid responses:', error);
+    throw error;
+  }
 }
