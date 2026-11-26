@@ -5,3 +5,10 @@ export interface MatrixCell {
   notes?: string | Record<string, string>;
   inputindex?: number;
 }
+
+export interface ImageHeader {
+  id: string;
+  name: string;
+  imageUrl: string;
+  type: 'row' | 'column';
+}

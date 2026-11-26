@@ -15,6 +15,7 @@ import RadarChartCard from '../components/RadarChartCard';
 import MatrixAnalyticsCard from '../components/MatrixAnalyticsCard';
 import Toolbar, { DashboardView } from '../components/Toolbar';
 import GridComponent from '../components/GridComponent';
+import GuideComponent from '../components/GuideComponent';
 import { MatrixCell } from '../types/matrix';
 
 interface TransformedMetrics {
@@ -320,6 +321,11 @@ export default function AnalyticsDashboard() {
               pollMetadata={pollMetadata}
               responsesList={responsesList}
             />
+          )}
+
+          {/* Guide Component Tab */}
+          {activeTab === 'guide' && (
+            <GuideComponent />
           )}
         </div>
       </main>

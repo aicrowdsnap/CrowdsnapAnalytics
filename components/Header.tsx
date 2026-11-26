@@ -53,6 +53,16 @@ export default function Header({ activeTab = 'analytics', onTabChange }: HeaderP
         >
           Grid Component
         </button>
+        <button
+          onClick={() => onTabChange?.('guide')}
+          className={`text-s font-display font-bold tracking-widest uppercase transition-colors duration-200 ${
+            activeTab === 'guide'
+              ? 'text-[var(--color-ink)]'
+              : 'text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
+          }`}
+        >
+          Guide
+        </button>
       </div>
     </div>
 
