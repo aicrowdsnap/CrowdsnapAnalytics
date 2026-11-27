@@ -1045,7 +1045,7 @@ export default function GuideComponent() {
           <button
             type="button"
             onClick={() => setActiveTab('create')}
-            className={`flex items-center gap-2 px-5 py-3.5 text-xs font-display font-bold uppercase tracking-wider transition border-b-2 ${
+            className={`flex items-center gap-2 px-5 py-3.5 text-xs font-display font-bold uppercase tracking-wider transition border-b-2 cursor-pointer ${
               activeTab === 'create'
                 ? 'border-[var(--color-neon-lime)] text-[var(--color-neon-lime)] bg-[var(--color-neon-lime)]/10'
                 : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
@@ -1057,7 +1057,7 @@ export default function GuideComponent() {
           <button
             type="button"
             onClick={() => setActiveTab('preview')}
-            className={`flex items-center gap-2 px-5 py-3.5 text-xs font-display font-bold uppercase tracking-wider transition border-b-2 ${
+            className={`flex items-center gap-2 px-5 py-3.5 text-xs font-display font-bold uppercase tracking-wider transition border-b-2 cursor-pointer ${
               activeTab === 'preview'
                 ? 'border-[var(--color-neon-teal)] text-[var(--color-neon-teal)] bg-[var(--color-neon-teal)]/10'
                 : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
@@ -1074,7 +1074,7 @@ export default function GuideComponent() {
           <button
             type="button"
             onClick={() => setActiveTab('load')}
-            className={`flex items-center gap-2 px-5 py-3.5 text-xs font-display font-bold uppercase tracking-wider transition border-b-2 ${
+            className={`flex items-center gap-2 px-5 py-3.5 text-xs font-display font-bold uppercase tracking-wider transition border-b-2 cursor-pointer ${
               activeTab === 'load'
                 ? 'border-[var(--color-neon-lime)] text-[var(--color-neon-lime)] bg-[var(--color-neon-lime)]/10'
                 : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
@@ -1091,7 +1091,7 @@ export default function GuideComponent() {
           <button
             type="button"
             onClick={() => setActiveTab('responses')}
-            className={`flex items-center gap-2 px-5 py-3.5 text-xs font-display font-bold uppercase tracking-wider transition border-b-2 ${
+            className={`flex items-center gap-2 px-5 py-3.5 text-xs font-display font-bold uppercase tracking-wider transition border-b-2 cursor-pointer ${
               activeTab === 'responses'
                 ? 'border-[var(--color-neon-purple)] text-[var(--color-neon-purple)] bg-[var(--color-neon-purple)]/10'
                 : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
@@ -1111,7 +1111,7 @@ export default function GuideComponent() {
           <button
             type="button"
             onClick={handleNewGrid}
-            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--color-neon-lime)] text-[var(--color-void)] font-semibold text-xs uppercase tracking-wider hover:bg-[var(--color-neon-lime)]/90 transition"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--color-neon-lime)] text-[var(--color-void)] font-semibold text-xs uppercase tracking-wider hover:bg-[var(--color-neon-lime)]/90 transition cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             New Grid
@@ -1146,7 +1146,7 @@ export default function GuideComponent() {
                     key={item.id}
                     type="button"
                     onClick={() => setGridType(item.id)}
-                    className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all ${
+                    className={`w-full flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer ${
                       isSelected
                         ? 'border-[var(--color-neon-lime)] bg-[var(--color-neon-lime)]/12 shadow-[0_0_20px_-8px_rgba(160,212,5,0.45)]'
                         : 'border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)]'
@@ -1614,7 +1614,7 @@ export default function GuideComponent() {
               <button
                 type="button"
                 onClick={() => setActiveTab('preview')}
-                className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)] text-xs font-semibold text-[var(--color-ink)] flex items-center justify-center gap-2 transition"
+                className="w-full sm:w-auto px-5 py-2.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)] text-xs font-semibold text-[var(--color-ink)] flex items-center justify-center gap-2 transition cursor-pointer"
               >
                 <Eye className="w-4 h-4 text-[var(--color-neon-teal)]" />
                 Live Preview
@@ -1623,7 +1623,7 @@ export default function GuideComponent() {
                 <button
                   type="button"
                   onClick={handleUpdateGrid}
-                  className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-[var(--color-neon-teal)] to-[var(--color-neon-cyan)] text-[var(--color-on-accent)] font-bold text-xs shadow-[0_4px_20px_-4px_rgba(0,220,180,0.45)] hover:brightness-105 active:scale-98 transition"
+                  className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-[var(--color-neon-teal)] to-[var(--color-neon-cyan)] text-[var(--color-on-accent)] font-bold text-xs shadow-[0_4px_20px_-4px_rgba(0,220,180,0.45)] hover:brightness-105 active:scale-98 transition cursor-pointer"
                 >
                   Update Grid
                 </button>
@@ -1631,7 +1631,7 @@ export default function GuideComponent() {
               <button
                 type="button"
                 onClick={handleSaveGrid}
-                className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-[var(--color-neon-lime)] to-[var(--color-neon-green)] text-[var(--color-on-accent)] font-bold text-xs shadow-[0_4px_20px_-4px_rgba(160,212,5,0.45)] hover:brightness-105 active:scale-98 transition"
+                className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-[var(--color-neon-lime)] to-[var(--color-neon-green)] text-[var(--color-on-accent)] font-bold text-xs shadow-[0_4px_20px_-4px_rgba(160,212,5,0.45)] hover:brightness-105 active:scale-98 transition cursor-pointer"
               >
                 Create Grid
               </button>
@@ -1874,7 +1874,7 @@ export default function GuideComponent() {
                 type="button"
                 onClick={loadGridsFromDatabase}
                 disabled={isLoadingGrids}
-                className="px-4 py-2.5 bg-[var(--color-neon-lime)] text-black rounded-xl font-semibold hover:bg-[var(--color-neon-lime)]/90 disabled:opacity-50 transition flex items-center gap-2"
+                className="px-4 py-2.5 bg-[var(--color-neon-lime)] text-black rounded-xl font-semibold hover:bg-[var(--color-neon-lime)]/90 disabled:opacity-50 transition flex items-center gap-2 cursor-pointer"
               >
                 {isLoadingGrids ? (
                   <>
@@ -1934,7 +1934,7 @@ export default function GuideComponent() {
                         type="button"
                         onClick={() => handleLoadGridFromDB(grid.grid_id, grid.grid_name)}
                         disabled={isLoadingGrids}
-                        className="px-4 py-2 rounded-lg border border-[var(--color-neon-lime)] bg-[var(--color-neon-lime)]/10 text-[var(--color-neon-lime)] hover:bg-[var(--color-neon-lime)]/20 disabled:opacity-50 text-xs font-semibold transition whitespace-nowrap"
+                        className="px-4 py-2 rounded-lg border border-[var(--color-neon-lime)] bg-[var(--color-neon-lime)]/10 text-[var(--color-neon-lime)] hover:bg-[var(--color-neon-lime)]/20 disabled:opacity-50 text-xs font-semibold transition whitespace-nowrap cursor-pointer"
                       >
                         Load
                       </button>
@@ -1945,7 +1945,7 @@ export default function GuideComponent() {
                           setActiveTab('responses');
                         }}
                         disabled={isLoadingGrids}
-                        className="px-4 py-2 rounded-lg border border-[var(--color-neon-purple)] bg-[var(--color-neon-purple)]/10 text-[var(--color-neon-purple)] hover:bg-[var(--color-neon-purple)]/20 disabled:opacity-50 text-xs font-semibold transition whitespace-nowrap"
+                        className="px-4 py-2 rounded-lg border border-[var(--color-neon-purple)] bg-[var(--color-neon-purple)]/10 text-[var(--color-neon-purple)] hover:bg-[var(--color-neon-purple)]/20 disabled:opacity-50 text-xs font-semibold transition whitespace-nowrap cursor-pointer"
                         title="View responses for this grid"
                       >
                         Responses
@@ -1954,7 +1954,7 @@ export default function GuideComponent() {
                         type="button"
                         onClick={() => handleDeleteGridFromDB(grid.grid_id, grid.grid_name)}
                         disabled={isLoadingGrids}
-                        className="p-2 rounded-lg border border-red-500/50 text-red-400 hover:bg-red-500/10 hover:border-red-500 disabled:opacity-50 transition"
+                        className="p-2 rounded-lg border border-red-500/50 text-red-400 hover:bg-red-500/10 hover:border-red-500 disabled:opacity-50 transition cursor-pointer"
                         title="Delete this grid"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -1998,7 +1998,7 @@ export default function GuideComponent() {
                   type="button"
                   onClick={loadResponsesFromDatabase}
                   disabled={isLoadingResponses || !currentGridId}
-                  className="px-4 py-2.5 bg-[var(--color-neon-purple)] text-white rounded-xl font-semibold hover:bg-[var(--color-neon-purple)]/90 disabled:opacity-50 transition flex items-center gap-2"
+                  className="px-4 py-2.5 bg-[var(--color-neon-purple)] text-white rounded-xl font-semibold hover:bg-[var(--color-neon-purple)]/90 disabled:opacity-50 transition flex items-center gap-2 cursor-pointer"
                 >
                   {isLoadingResponses ? (
                     <>
