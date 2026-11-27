@@ -24,10 +24,12 @@ import {
   X,
   Download,
   Loader2,
+  RotateCw,
 } from 'lucide-react';
 import { listSavedGrids, getGridDataById } from '@/services/api';
+import { MessageSquare } from 'lucide-react';
 
-type ActiveTab = 'create' | 'preview' | 'load';
+type ActiveTab = 'create' | 'preview' | 'load' | 'responses';
 
 export type GridFieldType =
   | 'selection'
@@ -198,6 +200,14 @@ export default function GuideComponent() {
   const [isLoadingGrids, setIsLoadingGrids] = useState(false);
   const [gridSearchQuery, setGridSearchQuery] = useState('');
 
+  // Responses State
+  const [userResponses, setUserResponses] = useState<any[]>([]);
+  const [isLoadingResponses, setIsLoadingResponses] = useState(false);
+  const [currentGridId, setCurrentGridId] = useState<string | null>(null);
+
+  // Track the current grid being previewed (for submitting responses)
+  const [currentPreviewGridId, setCurrentPreviewGridId] = useState<string | null>(null);
+
   // Header image upload refs
   const headerImageInputRef = useRef<HTMLInputElement>(null);
   const [uploadTarget, setUploadTarget] = useState<{ axis: 'row' | 'col'; id: string } | null>(null);
@@ -213,6 +223,27 @@ export default function GuideComponent() {
       loadGridsFromDatabase();
     }
   }, [activeTab]);
+
+  // Load responses when Responses tab is active
+  useEffect(() => {
+    if (activeTab === 'responses') {
+      // If dbGrids is empty, load them first
+      if (dbGrids.length === 0) {
+        loadGridsFromDatabase();
+      }
+      // Then load responses if gridId is selected
+      if (currentGridId) {
+        loadResponsesFromDatabase();
+      }
+    }
+  }, [activeTab, currentGridId]);
+
+  // Also load responses when user clicks Refresh button
+  const handleRefreshResponses = async () => {
+    if (currentGridId) {
+      await loadResponsesFromDatabase();
+    }
+  };
 
   const loadGridsFromDatabase = async () => {
     setIsLoadingGrids(true);
@@ -230,6 +261,37 @@ export default function GuideComponent() {
       console.error('Load error:', error);
     } finally {
       setIsLoadingGrids(false);
+    }
+  };
+
+  const loadResponsesFromDatabase = async () => {
+    if (!currentGridId) return;
+    
+    setIsLoadingResponses(true);
+    try {
+      const { getGridResponses } = await import('@/services/api');
+      const result = await getGridResponses(currentGridId);
+      
+      console.log('[GuideComponent] Responses result:', result);
+      console.log('[GuideComponent] Results array:', result.results);
+      console.log('[GuideComponent] Results count:', result.count);
+      
+      // The API already filters responses, so use them directly!
+      const responses = result.results || [];
+      console.log('[GuideComponent] Using responses directly:', responses.length);
+      
+      setUserResponses(responses);
+      
+      if (responses.length === 0) {
+        showToast('No responses found for this grid');
+      } else {
+        showToast(`✓ Loaded ${responses.length} responses`);
+      }
+    } catch (error) {
+      showToast(`Error loading responses: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('Responses load error:', error);
+    } finally {
+      setIsLoadingResponses(false);
     }
   };
 
@@ -281,39 +343,46 @@ export default function GuideComponent() {
             id: `row-${idx}`,
             label: row,
           })),
-          enabledCells: {},
+          enabledCells: metadata.enabledCells || {},
           showOptionLabels: true,
           required: false,
           createdAt: new Date().toLocaleString(),
         };
 
-        // Build enabled cells map based on actual saved cells
-        const enableMap: Record<string, boolean> = {};
+        // If enabledCells is stored in metadata, use it directly
+        let enableMap = { ...localGrid.enabledCells };
         
-        // First, initialize all cells as disabled (not shown in template)
-        localGrid.rows.forEach((r) => {
-          localGrid.columns.forEach((c) => {
-            enableMap[`${r.id}:${c.id}`] = false;
+        // If we have a valid enabledCells map from metadata, use it
+        if (enableMap && Object.keys(enableMap).length > 0) {
+          // Use the stored map as-is
+          localGrid.enabledCells = enableMap;
+        } else if (cells && Array.isArray(cells)) {
+          // Fallback: build enabledCells from template cells in database
+          enableMap = {};
+          
+          // Initialize all cells as disabled
+          localGrid.rows.forEach((r) => {
+            localGrid.columns.forEach((c) => {
+              enableMap[`${r.id}:${c.id}`] = false;
+            });
           });
-        });
 
-        // Then, only enable cells that actually exist in the database
-        // (cells that were part of the grid template)
-        if (cells && Array.isArray(cells)) {
+          // Enable only cells that exist in the database as template cells
           cells.forEach((cell: any) => {
-            // Find matching row and column by their labels
-            const matchingRow = localGrid.rows.find(r => r.label === cell.row);
-            const matchingCol = localGrid.columns.find(c => c.label === cell.column);
-            
-            if (matchingRow && matchingCol) {
-              const cellKey = `${matchingRow.id}:${matchingCol.id}`;
-              // Cell exists in database = it's part of the grid template
-              enableMap[cellKey] = true;
+            const notes = cell.notes ? (typeof cell.notes === 'string' ? JSON.parse(cell.notes) : cell.notes) : {};
+            if (notes.isGridTemplate === true) {
+              const matchingRow = localGrid.rows.find(r => r.label === cell.row);
+              const matchingCol = localGrid.columns.find(c => c.label === cell.column);
+              
+              if (matchingRow && matchingCol) {
+                const cellKey = `${matchingRow.id}:${matchingCol.id}`;
+                enableMap[cellKey] = true;
+              }
             }
           });
+          
+          localGrid.enabledCells = enableMap;
         }
-
-        localGrid.enabledCells = enableMap;
 
         // Load into builder
         setQuestionTitle(localGrid.title);
@@ -324,6 +393,7 @@ export default function GuideComponent() {
         setEnabledCells(localGrid.enabledCells);
         setShowOptionLabels(localGrid.showOptionLabels);
         setRequired(localGrid.required);
+        setCurrentPreviewGridId(gridId); // Set the preview grid ID so responses can be submitted
         setActiveTab('create');
         showToast(`✓ Loaded "${gridName}" into editor`);
       }
@@ -523,16 +593,20 @@ export default function GuideComponent() {
 
     // Save to database
     try {
+      const gridId = `grid_${newGrid.id}`;
       const response = await fetch('/api/grid/save', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          gridId: `grid_${newGrid.id}`,
+          gridId: gridId,
           gridName: questionTitle.trim(),
           gridType: gridType,
           columns: columns.map((c) => c.label),
           rows: rows.map((r) => r.label),
           cells: matrixCells,
+          metadata: {
+            enabledCells: enabledCells, // Store which cells are enabled/disabled
+          }
         }),
       });
 
@@ -544,6 +618,7 @@ export default function GuideComponent() {
 
       const saveResult = await response.json();
       setSavedGrids((prev) => [newGrid, ...prev]);
+      setCurrentPreviewGridId(gridId); // Store the grid ID for response submission
       setPreviewAnswers({});
       setActiveTab('preview');
       showToast(`✓ Grid template saved! (${saveResult.cellCount} cells in structure)`);
@@ -562,6 +637,7 @@ export default function GuideComponent() {
     setEnabledCells({ ...grid.enabledCells });
     setShowOptionLabels(grid.showOptionLabels);
     setRequired(grid.required);
+    setCurrentPreviewGridId(grid.id); // Set the preview grid ID so responses can be submitted
     setActiveTab('create');
     showToast(`Loaded "${grid.title}" into editor.`);
   };
@@ -868,6 +944,99 @@ export default function GuideComponent() {
   const activeCellCount = Object.values(enabledCells).filter(Boolean).length;
   const totalCellCount = rows.length * columns.length;
 
+  // Handler to reset form for new grid
+  const handleNewGrid = () => {
+    setQuestionTitle('Please rate the following features');
+    setSelectionOptions(['Poor', 'Average', 'Good', 'Excellent']);
+    setGridType('selection');
+    setColumns(createDefaultColumns());
+    setRows(createDefaultRows());
+    setEnabledCells(buildDefaultEnabledMap(createDefaultRows(), createDefaultColumns()));
+    setShowOptionLabels(true);
+    setRequired(false);
+    setCurrentPreviewGridId(null);
+    setActiveTab('create');
+    showToast('✓ Ready for new grid');
+  };
+
+  // Handler to update an existing grid
+  const handleUpdateGrid = async () => {
+    if (!currentPreviewGridId) {
+      showToast('No grid selected for update');
+      return;
+    }
+
+    if (!questionTitle.trim()) {
+      showToast('Please enter a question title');
+      return;
+    }
+
+    const activeCount = Object.values(enabledCells).filter(Boolean).length;
+    if (activeCount === 0) {
+      showToast('Enable at least one cell in the grid.');
+      return;
+    }
+
+    // Build matrix cells for update
+    const matrixCells: Array<{
+      row: string;
+      column: string;
+      userInput?: boolean;
+      notes?: Record<string, any> | string;
+    }> = [];
+
+    rows.forEach((row) => {
+      columns.forEach((col) => {
+        const cellKey = `${row.id}:${col.id}`;
+        const isEnabled = enabledCells[cellKey] ?? true;
+
+        if (isEnabled) {
+          matrixCells.push({
+            row: row.label,
+            column: col.label,
+            userInput: false,
+            notes: {
+              gridType,
+              isGridTemplate: true,
+              optionIndex: selectionOptions.indexOf(col.label),
+            },
+          });
+        }
+      });
+    });
+
+    try {
+      const response = await fetch('/api/grid/save', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          gridId: currentPreviewGridId,
+          gridName: questionTitle.trim(),
+          gridType: gridType,
+          columns: columns.map((c) => c.label),
+          rows: rows.map((r) => r.label),
+          cells: matrixCells,
+          metadata: {
+            enabledCells: enabledCells,
+          }
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        showToast(`Failed to update: ${error.error}`);
+        return;
+      }
+
+      showToast('✓ Grid updated successfully');
+      // Refresh the grid list
+      await loadGridsFromDatabase();
+    } catch (error) {
+      showToast('Error updating grid');
+      console.error(error);
+    }
+  };
+
   return (
     <div className="w-full rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] overflow-hidden">
       {/* Top Mode Switcher Bar */}
@@ -919,14 +1088,42 @@ export default function GuideComponent() {
               </span>
             )}
           </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('responses')}
+            className={`flex items-center gap-2 px-5 py-3.5 text-xs font-display font-bold uppercase tracking-wider transition border-b-2 ${
+              activeTab === 'responses'
+                ? 'border-[var(--color-neon-purple)] text-[var(--color-neon-purple)] bg-[var(--color-neon-purple)]/10'
+                : 'border-transparent text-[var(--color-ink-muted)] hover:text-[var(--color-ink)]'
+            }`}
+          >
+            <MessageSquare className="w-4 h-4" />
+            Responses
+            {userResponses.length > 0 && (
+              <span className="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-[var(--color-neon-purple)]/20 text-[var(--color-neon-purple)]">
+                {userResponses.length}
+              </span>
+            )}
+          </button>
         </div>
 
-        {toastMessage && (
-          <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[var(--color-neon-lime)]/15 text-[var(--color-neon-lime)] border border-[var(--color-neon-lime)]/30">
-            <Sparkles className="w-3.5 h-3.5" />
-            {toastMessage}
-          </div>
-        )}
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={handleNewGrid}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-[var(--color-neon-lime)] text-[var(--color-void)] font-semibold text-xs uppercase tracking-wider hover:bg-[var(--color-neon-lime)]/90 transition"
+          >
+            <Plus className="w-4 h-4" />
+            New Grid
+          </button>
+
+          {toastMessage && (
+            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium bg-[var(--color-neon-lime)]/15 text-[var(--color-neon-lime)] border border-[var(--color-neon-lime)]/30">
+              <Sparkles className="w-3.5 h-3.5" />
+              {toastMessage}
+            </div>
+          )}
+        </div>
       </div>
 
       {/* ==================== CREATE TAB ==================== */}
@@ -1422,6 +1619,15 @@ export default function GuideComponent() {
                 <Eye className="w-4 h-4 text-[var(--color-neon-teal)]" />
                 Live Preview
               </button>
+              {currentPreviewGridId && (
+                <button
+                  type="button"
+                  onClick={handleUpdateGrid}
+                  className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-[var(--color-neon-teal)] to-[var(--color-neon-cyan)] text-[var(--color-on-accent)] font-bold text-xs shadow-[0_4px_20px_-4px_rgba(0,220,180,0.45)] hover:brightness-105 active:scale-98 transition"
+                >
+                  Update Grid
+                </button>
+              )}
               <button
                 type="button"
                 onClick={handleSaveGrid}
@@ -1482,7 +1688,9 @@ export default function GuideComponent() {
                   try {
                     setIsSubmittingResponse(true);
                     
-                    // Convert previewAnswers (which are row-column keys mapped to checkbox states) into MatrixCell format
+                    // Convert previewAnswers into MatrixCell format
+                    // For selection/dropdown/etc: value is the choice (string)
+                    // For checkbox: value is boolean true
                     const responseMatrixCells: Array<{
                       row: string;
                       column: string;
@@ -1499,16 +1707,20 @@ export default function GuideComponent() {
                           // Look up the user's response for this cell
                           const userAnswer = previewAnswers[`draft:${cellKey}`];
                           
-                          // Only save cells that the user actually checked (userInput = true)
-                          // This way we only store user responses, not the template
-                          if (userAnswer === true) {
+                          // Check if user has provided any answer
+                          // For checkbox: userAnswer === true
+                          // For selection/dropdown/rating/etc: userAnswer has a value (string, number, etc)
+                          const hasAnswer = userAnswer !== undefined && userAnswer !== null && userAnswer !== '' && userAnswer !== false;
+                          
+                          if (hasAnswer) {
                             responseMatrixCells.push({
                               row: row.label,
                               column: col.label,
                               userInput: true,
                               notes: {
                                 gridType,
-                                isUserResponse: true,
+                                isUserResponse: true, // Mark as user response, NOT as template
+                                answer: userAnswer, // Store the actual answer value
                               },
                             });
                           }
@@ -1516,32 +1728,34 @@ export default function GuideComponent() {
                       });
                     });
 
-                    // Save response with a unique ID to avoid conflicts with template
-                    const responseId = `response_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-                    const response = await fetch('/api/grid/save', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      body: JSON.stringify({
-                        gridId: responseId,
-                        gridName: `${questionTitle} - Response @ ${new Date().toLocaleTimeString()}`,
-                        gridType: gridType,
-                        columns: columns.map((c) => c.label),
-                        rows: rows.map((r) => r.label),
-                        cells: responseMatrixCells,
-                      }),
-                    });
-
-                    if (!response.ok) {
-                      const error = await response.json();
-                      showToast(`Failed to save response: ${error.error}`);
+                    if (responseMatrixCells.length === 0) {
+                      showToast('Please select at least one option before submitting');
+                      setIsSubmittingResponse(false);
                       return;
                     }
 
-                    const result = await response.json();
-                    showToast(`✓ Response saved! (${result.cellCount} cells checked)`);
+                    // Save response to the original grid template
+                    if (!currentPreviewGridId) {
+                      showToast('Error: Grid ID not found. Please create the grid first.');
+                      setIsSubmittingResponse(false);
+                      return;
+                    }
+
+                    const responseId = `response_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+                    
+                    const { submitGridResponse } = await import('@/services/api');
+                    const result = await submitGridResponse({
+                      gridId: currentPreviewGridId,
+                      cells: responseMatrixCells,
+                      responseId,
+                      responseDateTime: new Date().toISOString(),
+                    });
+
+                    showToast(`✓ Response saved! (${responseMatrixCells.length} responses submitted)`);
                     setPreviewAnswers({}); // Clear preview answers after save
                   } catch (error) {
                     showToast(`Error saving response: ${error instanceof Error ? error.message : 'Unknown error'}`);
+                    console.error('Response submission error:', error);
                   } finally {
                     setIsSubmittingResponse(false);
                   }
@@ -1669,7 +1883,7 @@ export default function GuideComponent() {
                   </>
                 ) : (
                   <>
-                    <Download className="w-4 h-4" />
+                    <RotateCw className="w-4 h-4" />
                     Refresh
                   </>
                 )}
@@ -1726,6 +1940,18 @@ export default function GuideComponent() {
                       </button>
                       <button
                         type="button"
+                        onClick={() => {
+                          setCurrentGridId(grid.grid_id);
+                          setActiveTab('responses');
+                        }}
+                        disabled={isLoadingGrids}
+                        className="px-4 py-2 rounded-lg border border-[var(--color-neon-purple)] bg-[var(--color-neon-purple)]/10 text-[var(--color-neon-purple)] hover:bg-[var(--color-neon-purple)]/20 disabled:opacity-50 text-xs font-semibold transition whitespace-nowrap"
+                        title="View responses for this grid"
+                      >
+                        Responses
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => handleDeleteGridFromDB(grid.grid_id, grid.grid_name)}
                         disabled={isLoadingGrids}
                         className="p-2 rounded-lg border border-red-500/50 text-red-400 hover:bg-red-500/10 hover:border-red-500 disabled:opacity-50 transition"
@@ -1739,6 +1965,166 @@ export default function GuideComponent() {
               ))
             )}
           </div>
+        </div>
+      )}
+
+      {/* ==================== RESPONSES TAB ==================== */}
+      {activeTab === 'responses' && (
+        <div className="p-6 space-y-6">
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div>
+                <h3 className="text-lg font-display font-bold text-[var(--color-ink)]">
+                  User Responses
+                </h3>
+                <p className="text-xs text-[var(--color-ink-muted)] mt-1">
+                  View all responses submitted by users
+                </p>
+              </div>
+              <div className="flex gap-2">
+                <select
+                  value={currentGridId || ''}
+                  onChange={(e) => setCurrentGridId(e.target.value)}
+                  className="px-4 py-2.5 rounded-xl bg-[var(--color-void-2)] border border-[var(--color-border)] text-sm text-[var(--color-ink)] focus:outline-none focus:border-[var(--color-neon-purple)] transition"
+                >
+                  <option value="">Select a grid...</option>
+                  {dbGrids.map((grid) => (
+                    <option key={grid.grid_id} value={grid.grid_id}>
+                      {grid.grid_name}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="button"
+                  onClick={loadResponsesFromDatabase}
+                  disabled={isLoadingResponses || !currentGridId}
+                  className="px-4 py-2.5 bg-[var(--color-neon-purple)] text-white rounded-xl font-semibold hover:bg-[var(--color-neon-purple)]/90 disabled:opacity-50 transition flex items-center gap-2"
+                >
+                  {isLoadingResponses ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Loading...
+                    </>
+                  ) : (
+                    <>
+                      <RotateCw className="w-4 h-4" />
+                      Refresh
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Responses Display */}
+          {isLoadingResponses ? (
+            <div className="flex items-center justify-center min-h-[300px]">
+              <div className="flex flex-col items-center gap-3">
+                <Loader2 className="w-8 h-8 animate-spin text-[var(--color-neon-purple)]" />
+                <p className="text-xs text-[var(--color-ink-muted)]">Loading responses...</p>
+              </div>
+            </div>
+          ) : !currentGridId ? (
+            <div className="p-8 rounded-xl border border-dashed border-[var(--color-border)] text-center">
+              <MessageSquare className="w-8 h-8 text-[var(--color-ink-muted)]/40 mx-auto mb-2" />
+              <p className="text-sm text-[var(--color-ink-muted)]">Select a grid to view responses</p>
+              <p className="text-xs text-[var(--color-ink-muted)]/60 mt-1">First load a grid from the Load Grids tab</p>
+            </div>
+          ) : userResponses.length === 0 ? (
+            <div className="p-8 rounded-xl border border-dashed border-[var(--color-border)] text-center">
+              <MessageSquare className="w-8 h-8 text-[var(--color-ink-muted)]/40 mx-auto mb-2" />
+              <p className="text-sm text-[var(--color-ink-muted)]">No responses found</p>
+              <p className="text-xs text-[var(--color-ink-muted)]/60 mt-1">Users haven't submitted any responses yet</p>
+            </div>
+          ) : (
+            // Display responses in grid/matrix format
+            <div className="space-y-6">
+              {/* Group responses by response_id to show each submission separately */}
+              {Object.entries(
+                userResponses.reduce((acc: Record<string, any[]>, response: any) => {
+                  const respId = response.response_id || 'default';
+                  if (!acc[respId]) acc[respId] = [];
+                  acc[respId].push(response);
+                  return acc;
+                }, {})
+              ).map(([respId, responses]: [string, any], submissionIdx: number) => {
+                // Get unique rows and columns from this response set
+                const rows = Array.from(new Set((responses as any[]).map((r: any) => r.row_name)));
+                const columns = Array.from(new Set((responses as any[]).map((r: any) => r.column_name)));
+                
+                // Create a map for quick lookup
+                const responseMap = new Map(
+                  responses.map((r: any) => [`${r.row_name}|${r.column_name}`, r])
+                );
+
+                return (
+                  <div key={respId || submissionIdx} className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="text-sm font-bold text-[var(--color-ink)]">
+                          Response #{submissionIdx + 1}
+                        </h4>
+                        <p className="text-xs text-[var(--color-ink-muted)] mt-1">
+                          Submitted: {responses[0]?.created_at ? new Date(responses[0].created_at).toLocaleString() : '—'}
+                        </p>
+                      </div>
+                      {responses[0]?.notes && typeof responses[0].notes === 'string' && (
+                        <span className="inline-flex items-center px-2.5 py-1 rounded-full bg-[var(--color-neon-purple)]/20 text-[var(--color-neon-purple)] text-[10px] font-semibold">
+                          {JSON.parse(responses[0].notes)?.gridType ? 
+                            JSON.parse(responses[0].notes).gridType.charAt(0).toUpperCase() + JSON.parse(responses[0].notes).gridType.slice(1)
+                            : 'Unknown'}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Grid/Matrix display */}
+                    <div className="overflow-x-auto rounded-xl border border-[var(--color-border)] bg-[var(--color-void-2)]/60">
+                      <table className="w-full text-xs border-collapse">
+                        <thead>
+                          <tr className="border-b border-[var(--color-border)] bg-[var(--color-surface)]">
+                            <th className="px-4 py-3 text-left font-semibold text-[var(--color-ink-muted)] min-w-[150px]">
+                              Criteria
+                            </th>
+                            {columns.map((col) => (
+                              <th key={col} className="px-4 py-3 text-center font-semibold text-[var(--color-ink)] border-l border-[var(--color-border)] min-w-[120px]">
+                                {col}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[var(--color-border)]">
+                          {rows.map((row) => (
+                            <tr key={row} className="hover:bg-[var(--color-surface-hover)] transition">
+                              <td className="px-4 py-3 font-medium text-[var(--color-ink)] bg-[var(--color-surface)]/40">
+                                {row}
+                              </td>
+                              {columns.map((col) => {
+                                const response = responseMap.get(`${row}|${col}`);
+                                return (
+                                  <td
+                                    key={`${row}|${col}`}
+                                    className="px-4 py-3 text-center border-l border-[var(--color-border)]"
+                                  >
+                                    {response ? (
+                                      <span className="inline-flex items-center px-2.5 py-1.5 rounded-lg bg-[var(--color-neon-lime)]/20 text-[var(--color-neon-lime)] font-semibold text-xs border border-[var(--color-neon-lime)]/50">
+                                        {(response as any)?.cell_value || '✓'}
+                                      </span>
+                                    ) : (
+                                      <span className="text-[var(--color-ink-muted)]/40">—</span>
+                                    )}
+                                  </td>
+                                );
+                              })}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 

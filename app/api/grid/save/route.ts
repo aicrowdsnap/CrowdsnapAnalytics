@@ -15,6 +15,9 @@ interface SaveGridRequest {
   columns: string[];
   rows: string[];
   cells: MatrixCell[];
+  metadata?: {
+    enabledCells?: Record<string, boolean>;
+  };
   responseId?: string;
   responseDateTime?: string;
   responseIp?: string;
@@ -40,7 +43,8 @@ export async function POST(request: NextRequest) {
       grid_type: body.gridType,
       metadata: {
         columns: body.columns,
-        rows: body.rows
+        rows: body.rows,
+        enabledCells: body.metadata?.enabledCells || {}
       }
     });
 

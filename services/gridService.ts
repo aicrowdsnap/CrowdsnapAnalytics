@@ -9,6 +9,7 @@ export interface GridData {
   metadata: {
     columns: string[];
     rows: string[];
+    enabledCells?: Record<string, boolean>;
   };
 }
 
@@ -253,7 +254,24 @@ export async function getGridResponses(gridId: string): Promise<SearchResult[]> 
       ORDER BY created_at DESC
     `;
     const results = await executeQuery<SearchResult[]>(query, [gridId]);
-    return results;
+    
+    // Filter out template cells (cells with isGridTemplate: true in notes)
+    // Keep only actual user responses
+    const userResponses = results.filter(cell => {
+      try {
+        const notes = typeof cell.notes === 'string' ? JSON.parse(cell.notes) : cell.notes;
+        // If it has isGridTemplate: true, it's not a user response
+        if (notes && notes.isGridTemplate === true) {
+          return false;
+        }
+        return true;
+      } catch {
+        // If we can't parse notes, assume it's a response
+        return true;
+      }
+    });
+    
+    return userResponses;
   } catch (error) {
     console.error('Error getting grid responses:', error);
     throw error;

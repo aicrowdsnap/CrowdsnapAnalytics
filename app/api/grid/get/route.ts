@@ -28,6 +28,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    // Ensure metadata is parsed (may come as string from database)
+    let parsedMetadata = metadata.metadata;
+    if (typeof parsedMetadata === 'string') {
+      try {
+        parsedMetadata = JSON.parse(parsedMetadata);
+      } catch {
+        // If parsing fails, treat as object
+        parsedMetadata = { columns: [], rows: [], enabledCells: {} };
+      }
+    }
+
     // Get all cells for this grid
     const cells = await getGridCells(gridId);
 
@@ -46,7 +57,7 @@ export async function GET(request: NextRequest) {
           gridId: metadata.grid_id,
           gridName: metadata.grid_name,
           gridType: metadata.grid_type,
-          metadata: metadata.metadata,
+          metadata: parsedMetadata,
           cells: matrixCells,
           totalCells: cells.length,
         },

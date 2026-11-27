@@ -159,3 +159,49 @@ export async function deleteGridData(params: { gridId: string }) {
   }
   return response.json();
 }
+
+// Get user responses for a specific grid
+export async function getGridResponses(gridId: string) {
+  const queryParams = new URLSearchParams();
+  queryParams.set('gridId', gridId);
+
+  const response = await fetch(`/api/grid/responses?${queryParams}`, {
+    method: 'GET',
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+  if (!response.ok) {
+    const errData = await response.json().catch(() => ({}));
+    throw new Error(errData.error || 'Failed to get grid responses');
+  }
+  return response.json();
+}
+
+// Submit a response to an existing grid (without creating a new grid entry)
+export interface SubmitResponsePayload {
+  gridId: string;
+  cells: Array<{
+    row: string;
+    column: string;
+    userInput?: boolean;
+    notes?: Record<string, any> | string;
+  }>;
+  responseId?: string;
+  responseDateTime?: string;
+  responseIp?: string;
+  responseGuid?: string;
+}
+
+export async function submitGridResponse(payload: SubmitResponsePayload) {
+  const response = await fetch('/api/grid/submit-response', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const errData = await response.json().catch(() => ({}));
+    throw new Error(errData.error || 'Failed to submit response');
+  }
+  return response.json();
+}
