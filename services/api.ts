@@ -143,3 +143,19 @@ export async function getGridDataById(params: GetGridParams) {
   }
   return response.json();
 }
+
+
+// Delete a grid from the database
+export async function deleteGridData(params: { gridId: string }) {
+  const response = await fetch('/api/grid/delete', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(params),
+  });
+
+  if (!response.ok) {
+    const errData = await response.json().catch(() => ({}));
+    throw new Error(errData.error || 'Failed to delete grid');
+  }
+  return response.json();
+}

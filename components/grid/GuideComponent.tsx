@@ -233,6 +233,31 @@ export default function GuideComponent() {
     }
   };
 
+  const handleDeleteGridFromDB = async (gridId: string, gridName: string) => {
+    // Show confirmation dialog
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${gridName}"? This action cannot be undone.`
+    );
+    
+    if (!confirmed) return;
+
+    try {
+      setIsLoadingGrids(true);
+      const { deleteGridData } = await import('@/services/api');
+      
+      await deleteGridData({ gridId });
+      
+      // Remove from local list
+      setDbGrids((prev) => prev.filter((g) => g.grid_id !== gridId));
+      showToast(`✓ Grid "${gridName}" deleted successfully`);
+    } catch (error) {
+      showToast(`Error deleting grid: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('Delete error:', error);
+    } finally {
+      setIsLoadingGrids(false);
+    }
+  };
+
   const handleLoadGridFromDB = async (gridId: string, gridName: string) => {
     try {
       setIsLoadingGrids(true);
@@ -556,8 +581,6 @@ export default function GuideComponent() {
     setSavedGrids((prev) => prev.filter((g) => g.id !== id));
     showToast('Grid deleted.');
   };
-
-  // --- Respondent Cell Renderer (Preview Mode) ---
   const renderRespondentCell = (
     grid: Pick<SavedGrid, 'gridType' | 'options' | 'showOptionLabels'>,
     col: AxisHeader,
@@ -1692,14 +1715,25 @@ export default function GuideComponent() {
                       </p>
                     </div>
 
-                    <button
-                      type="button"
-                      onClick={() => handleLoadGridFromDB(grid.grid_id, grid.grid_name)}
-                      disabled={isLoadingGrids}
-                      className="px-4 py-2 rounded-lg border border-[var(--color-neon-lime)] bg-[var(--color-neon-lime)]/10 text-[var(--color-neon-lime)] hover:bg-[var(--color-neon-lime)]/20 disabled:opacity-50 text-xs font-semibold transition whitespace-nowrap"
-                    >
-                      Load
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handleLoadGridFromDB(grid.grid_id, grid.grid_name)}
+                        disabled={isLoadingGrids}
+                        className="px-4 py-2 rounded-lg border border-[var(--color-neon-lime)] bg-[var(--color-neon-lime)]/10 text-[var(--color-neon-lime)] hover:bg-[var(--color-neon-lime)]/20 disabled:opacity-50 text-xs font-semibold transition whitespace-nowrap"
+                      >
+                        Load
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteGridFromDB(grid.grid_id, grid.grid_name)}
+                        disabled={isLoadingGrids}
+                        className="p-2 rounded-lg border border-red-500/50 text-red-400 hover:bg-red-500/10 hover:border-red-500 disabled:opacity-50 transition"
+                        title="Delete this grid"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))
