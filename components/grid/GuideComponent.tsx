@@ -407,6 +407,93 @@ export default function GuideComponent() {
     }
   };
 
+  // Handler to preview grid in the User Preview tab
+  const handlePreviewGrid = async (gridId: string, gridName: string) => {
+    try {
+      setIsLoadingGrids(true);
+      const result = await getGridDataById({ gridId });
+
+      if (result.grid) {
+        const { gridType, metadata, cells } = result.grid;
+        
+        // Convert to local grid format
+        const localGrid: SavedGrid = {
+          id: gridId,
+          title: gridName,
+          gridType: gridType as any,
+          options: metadata.columns || [],
+          columns: (metadata.columns || []).map((col: string, idx: number) => ({
+            id: `col-${idx}`,
+            label: col,
+            customType: 'text' as const,
+          })),
+          rows: (metadata.rows || []).map((row: string, idx: number) => ({
+            id: `row-${idx}`,
+            label: row,
+          })),
+          enabledCells: metadata.enabledCells || {},
+          showOptionLabels: true,
+          required: false,
+          createdAt: new Date().toLocaleString(),
+        };
+
+        // If enabledCells is stored in metadata, use it directly
+        let enableMap = { ...localGrid.enabledCells };
+        
+        // If we have a valid enabledCells map from metadata, use it
+        if (enableMap && Object.keys(enableMap).length > 0) {
+          // Use the stored map as-is
+          localGrid.enabledCells = enableMap;
+        } else if (cells && Array.isArray(cells)) {
+          // Fallback: build enabledCells from template cells in database
+          enableMap = {};
+          
+          // Initialize all cells as disabled
+          localGrid.rows.forEach((r) => {
+            localGrid.columns.forEach((c) => {
+              enableMap[`${r.id}:${c.id}`] = false;
+            });
+          });
+
+          // Enable only cells that exist in the database as template cells
+          cells.forEach((cell: any) => {
+            const notes = cell.notes ? (typeof cell.notes === 'string' ? JSON.parse(cell.notes) : cell.notes) : {};
+            if (notes.isGridTemplate === true) {
+              const matchingRow = localGrid.rows.find(r => r.label === cell.row);
+              const matchingCol = localGrid.columns.find(c => c.label === cell.column);
+              
+              if (matchingRow && matchingCol) {
+                const cellKey = `${matchingRow.id}:${matchingCol.id}`;
+                enableMap[cellKey] = true;
+              }
+            }
+          });
+          
+          localGrid.enabledCells = enableMap;
+        }
+
+        // Set up for preview
+        setQuestionTitle(localGrid.title);
+        setGridType(localGrid.gridType);
+        setSelectionOptions(localGrid.options);
+        setColumns(localGrid.columns);
+        setRows(localGrid.rows);
+        setEnabledCells(localGrid.enabledCells);
+        setShowOptionLabels(localGrid.showOptionLabels);
+        setRequired(localGrid.required);
+        setCurrentPreviewGridId(gridId);
+        setPreviewAnswers({});
+        setActiveTab('preview');
+        showToast(`✓ Previewing "${gridName}"`);
+      }
+    } catch (error) {
+      showToast(`Error loading grid: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error('Load error:', error);
+    } finally {
+      setIsLoadingGrids(false);
+    }
+  };
+
   // --- Column & Row Mutations ---
   const handleAddColumn = () => {
     const nextNum = columns.length + 1;
@@ -1936,6 +2023,16 @@ export default function GuideComponent() {
                     </div>
 
                     <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => handlePreviewGrid(grid.grid_id, grid.grid_name)}
+                        disabled={isLoadingGrids}
+                        className="px-4 py-2 rounded-lg border border-[var(--color-neon-teal)] bg-[var(--color-neon-teal)]/10 text-[var(--color-neon-teal)] hover:bg-[var(--color-neon-teal)]/20 disabled:opacity-50 text-xs font-semibold transition whitespace-nowrap cursor-pointer flex items-center gap-1.5"
+                        title="Preview this grid"
+                      >
+                        <Eye className="w-3.5 h-3.5" />
+                        Preview
+                      </button>
                       <button
                         type="button"
                         onClick={() => handleLoadGridFromDB(grid.grid_id, grid.grid_name)}
