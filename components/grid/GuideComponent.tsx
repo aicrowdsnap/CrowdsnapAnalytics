@@ -25,6 +25,8 @@ import {
   Download,
   Loader2,
   RotateCw,
+  Save,
+  Edit2,
 } from 'lucide-react';
 import { listSavedGrids, getGridDataById } from '@/services/api';
 import { MessageSquare } from 'lucide-react';
@@ -620,7 +622,7 @@ export default function GuideComponent() {
       setSavedGrids((prev) => [newGrid, ...prev]);
       setCurrentPreviewGridId(gridId); // Store the grid ID for response submission
       setPreviewAnswers({});
-      setActiveTab('preview');
+      setActiveTab('load');
       showToast(`✓ Grid template saved! (${saveResult.cellCount} cells in structure)`);
     } catch (error) {
       showToast(`Error saving grid: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -1031,6 +1033,8 @@ export default function GuideComponent() {
       showToast('✓ Grid updated successfully');
       // Refresh the grid list
       await loadGridsFromDatabase();
+      // Switch to Load Grids tab
+      setActiveTab('load');
     } catch (error) {
       showToast('Error updating grid');
       console.error(error);
@@ -1101,7 +1105,7 @@ export default function GuideComponent() {
             Responses
             {userResponses.length > 0 && (
               <span className="ml-1 px-1.5 py-0.5 text-[10px] rounded-full bg-[var(--color-neon-purple)]/20 text-[var(--color-neon-purple)]">
-                {userResponses.length}
+                {new Set(userResponses.map((r: any) => r.response_id)).size}
               </span>
             )}
           </button>
@@ -1623,16 +1627,18 @@ export default function GuideComponent() {
                 <button
                   type="button"
                   onClick={handleUpdateGrid}
-                  className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-[var(--color-neon-teal)] to-[var(--color-neon-cyan)] text-[var(--color-on-accent)] font-bold text-xs shadow-[0_4px_20px_-4px_rgba(0,220,180,0.45)] hover:brightness-105 active:scale-98 transition cursor-pointer"
+                  className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-[var(--color-neon-teal)] to-[var(--color-neon-cyan)] text-[var(--color-on-accent)] font-bold text-xs shadow-[0_4px_20px_-4px_rgba(0,220,180,0.45)] hover:brightness-105 active:scale-98 transition cursor-pointer flex items-center justify-center gap-2"
                 >
+                  <Edit2 className="w-4 h-4" />
                   Update Grid
                 </button>
               )}
               <button
                 type="button"
                 onClick={handleSaveGrid}
-                className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-[var(--color-neon-lime)] to-[var(--color-neon-green)] text-[var(--color-on-accent)] font-bold text-xs shadow-[0_4px_20px_-4px_rgba(160,212,5,0.45)] hover:brightness-105 active:scale-98 transition cursor-pointer"
+                className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-[var(--color-neon-lime)] to-[var(--color-neon-green)] text-[var(--color-on-accent)] font-bold text-xs shadow-[0_4px_20px_-4px_rgba(160,212,5,0.45)] hover:brightness-105 active:scale-98 transition cursor-pointer flex items-center justify-center gap-2"
               >
+                <Plus className="w-4 h-4" />
                 Create Grid
               </button>
             </div>
