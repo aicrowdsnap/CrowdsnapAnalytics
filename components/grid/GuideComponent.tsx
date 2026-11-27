@@ -840,7 +840,7 @@ export default function GuideComponent() {
                 <button
                   type="button"
                   onClick={() => setCellVal(null)}
-                  className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center text-[10px]"
+                  className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-red-500 text-white flex items-center justify-center text-[10px] cursor-pointer"
                 >
                   ×
                 </button>
@@ -1236,7 +1236,7 @@ export default function GuideComponent() {
                         <button
                           type="button"
                           onClick={() => handleRemoveSelectionOption(idx)}
-                          className="text-[var(--color-ink-muted)] hover:text-red-400 transition"
+                          className="text-[var(--color-ink-muted)] hover:text-red-400 transition cursor-pointer"
                           title="Remove option"
                         >
                           <X className="w-3.5 h-3.5" />
@@ -1264,7 +1264,7 @@ export default function GuideComponent() {
                   <button
                     type="button"
                     onClick={handleAddSelectionOption}
-                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[var(--color-neon-lime)]/20 text-[var(--color-neon-lime)] border border-[var(--color-neon-lime)]/40 hover:bg-[var(--color-neon-lime)]/30 text-xs font-semibold transition"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[var(--color-neon-lime)]/20 text-[var(--color-neon-lime)] border border-[var(--color-neon-lime)]/40 hover:bg-[var(--color-neon-lime)]/30 text-xs font-semibold transition cursor-pointer"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     Add Option
@@ -1295,7 +1295,7 @@ export default function GuideComponent() {
                   <button
                     type="button"
                     onClick={() => toggleAllCells(activeCellCount < totalCellCount)}
-                    className="px-2.5 py-1 rounded-md border border-[var(--color-border)] hover:bg-[var(--color-surface-hover)] text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] transition"
+                    className="px-2.5 py-1 rounded-md border border-[var(--color-border)] hover:bg-[var(--color-surface-hover)] text-[var(--color-ink-muted)] hover:text-[var(--color-ink)] transition cursor-pointer"
                   >
                     {activeCellCount < totalCellCount ? 'Check All' : 'Uncheck All'}
                   </button>
@@ -1331,7 +1331,7 @@ export default function GuideComponent() {
                                   <button
                                     type="button"
                                     onClick={() => updateColumn(col.id, { imageUrl: undefined })}
-                                    className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-red-500 text-white text-[9px] flex items-center justify-center"
+                                    className="absolute -top-1 -right-1 w-3.5 h-3.5 rounded-full bg-red-500 text-white text-[9px] flex items-center justify-center cursor-pointer"
                                     title="Remove image"
                                   >
                                     ×
@@ -1341,7 +1341,7 @@ export default function GuideComponent() {
                                 <button
                                   type="button"
                                   onClick={() => triggerHeaderImageUpload('col', col.id)}
-                                  className="p-1 rounded text-[var(--color-ink-muted)] hover:text-[var(--color-neon-lime)] hover:bg-[var(--color-surface-hover)] transition shrink-0"
+                                  className="p-1 rounded text-[var(--color-ink-muted)] hover:text-[var(--color-neon-lime)] hover:bg-[var(--color-surface-hover)] transition shrink-0 cursor-pointer"
                                   title="Attach column image"
                                 >
                                   <ImageIcon className="w-3.5 h-3.5" />
@@ -1362,7 +1362,7 @@ export default function GuideComponent() {
                                 <button
                                   type="button"
                                   onClick={() => handleRemoveColumn(col.id)}
-                                  className="opacity-0 group-hover:opacity-100 p-1 rounded text-[var(--color-ink-muted)] hover:text-red-400 transition shrink-0"
+                                  className="opacity-0 group-hover:opacity-100 p-1 rounded text-[var(--color-ink-muted)] hover:text-red-400 transition shrink-0 cursor-pointer"
                                   title="Delete column"
                                 >
                                   <Trash2 className="w-3.5 h-3.5" />
@@ -1400,7 +1400,7 @@ export default function GuideComponent() {
                         <button
                           type="button"
                           onClick={handleAddColumn}
-                          className="w-full py-2 px-3 rounded-lg border border-dashed border-[var(--color-neon-lime)]/50 hover:border-[var(--color-neon-lime)] bg-[var(--color-neon-lime)]/5 hover:bg-[var(--color-neon-lime)]/15 text-[var(--color-neon-lime)] font-semibold text-xs flex items-center justify-center gap-1.5 transition"
+                          className="w-full py-2 px-3 rounded-lg border border-dashed border-[var(--color-neon-lime)]/50 hover:border-[var(--color-neon-lime)] bg-[var(--color-neon-lime)]/5 hover:bg-[var(--color-neon-lime)]/15 text-[var(--color-neon-lime)] font-semibold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer"
                         >
                           <Plus className="w-3.5 h-3.5" />
                           Add Column
@@ -1440,7 +1440,7 @@ export default function GuideComponent() {
                               <button
                                 type="button"
                                 onClick={() => triggerHeaderImageUpload('row', row.id)}
-                                className="p-1 rounded text-[var(--color-ink-muted)] hover:text-[var(--color-neon-teal)] hover:bg-[var(--color-surface-hover)] transition shrink-0"
+                                className="p-1 rounded text-[var(--color-ink-muted)] hover:text-[var(--color-neon-teal)] hover:bg-[var(--color-surface-hover)] transition shrink-0 cursor-pointer"
                                 title="Attach row image"
                               >
                                 <ImageIcon className="w-3.5 h-3.5" />
@@ -1459,7 +1459,7 @@ export default function GuideComponent() {
                               <button
                                 type="button"
                                 onClick={() => handleRemoveRow(row.id)}
-                                className="opacity-0 group-hover/row:opacity-100 p-1 rounded text-[var(--color-ink-muted)] hover:text-red-400 transition shrink-0"
+                                className="opacity-0 group-hover/row:opacity-100 p-1 rounded text-[var(--color-ink-muted)] hover:text-red-400 transition shrink-0 cursor-pointer"
                                 title="Delete row"
                               >
                                 <Trash2 className="w-3.5 h-3.5" />
@@ -1514,7 +1514,7 @@ export default function GuideComponent() {
                         <button
                           type="button"
                           onClick={handleAddRow}
-                          className="w-full py-2 px-3 rounded-lg border border-dashed border-[var(--color-neon-teal)]/50 hover:border-[var(--color-neon-teal)] bg-[var(--color-neon-teal)]/5 hover:bg-[var(--color-neon-teal)]/15 text-[var(--color-neon-teal)] font-semibold text-xs flex items-center justify-center gap-1.5 transition"
+                          className="w-full py-2 px-3 rounded-lg border border-dashed border-[var(--color-neon-teal)]/50 hover:border-[var(--color-neon-teal)] bg-[var(--color-neon-teal)]/5 hover:bg-[var(--color-neon-teal)]/15 text-[var(--color-neon-teal)] font-semibold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer"
                         >
                           <Plus className="w-3.5 h-3.5" />
                           Add Row
@@ -1537,7 +1537,7 @@ export default function GuideComponent() {
               <button
                 type="button"
                 onClick={() => setAdvancedOpen((prev) => !prev)}
-                className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-[var(--color-surface-hover)] transition"
+                className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-[var(--color-surface-hover)] transition cursor-pointer"
               >
                 <span className="flex items-center gap-2 text-xs font-display font-bold uppercase tracking-wider text-[var(--color-ink)]">
                   <SlidersHorizontal className="w-3.5 h-3.5 text-[var(--color-neon-lime)]" />
@@ -1661,7 +1661,7 @@ export default function GuideComponent() {
               <button
                 type="button"
                 onClick={() => setActiveTab('create')}
-                className="px-3.5 py-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-void-2)] hover:bg-[var(--color-surface-hover)] text-xs font-semibold text-[var(--color-ink)] transition"
+                className="px-3.5 py-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-void-2)] hover:bg-[var(--color-surface-hover)] text-xs font-semibold text-[var(--color-ink)] transition cursor-pointer"
               >
                 ← Back to Editor
               </button>
@@ -1761,7 +1761,7 @@ export default function GuideComponent() {
                   }
                 }}
                 disabled={isSubmittingResponse}
-                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-[var(--color-neon-lime)] text-black rounded-lg font-semibold hover:bg-[var(--color-neon-lime)]/90 disabled:opacity-50 transition text-xs"
+                className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-[var(--color-neon-lime)] text-black rounded-lg font-semibold hover:bg-[var(--color-neon-lime)]/90 disabled:opacity-50 transition text-xs cursor-pointer"
               >
                 {isSubmittingResponse ? (
                   <>
@@ -1778,7 +1778,7 @@ export default function GuideComponent() {
               <button
                 onClick={() => setPreviewAnswers({})}
                 disabled={Object.keys(previewAnswers).length === 0}
-                className="px-4 py-2.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-void-2)] hover:bg-[var(--color-surface-hover)] text-xs font-semibold text-[var(--color-ink)] disabled:opacity-50 transition"
+                className="px-4 py-2.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-void-2)] hover:bg-[var(--color-surface-hover)] text-xs font-semibold text-[var(--color-ink)] disabled:opacity-50 transition cursor-pointer"
               >
                 Clear
               </button>
@@ -1813,14 +1813,14 @@ export default function GuideComponent() {
                       <button
                         type="button"
                         onClick={() => handleLoadIntoBuilder(grid)}
-                        className="px-3 py-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)] text-xs font-medium text-[var(--color-ink)] transition"
+                        className="px-3 py-1.5 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-hover)] text-xs font-medium text-[var(--color-ink)] transition cursor-pointer"
                       >
                         Edit
                       </button>
                       <button
                         type="button"
                         onClick={() => handleDuplicateGrid(grid)}
-                        className="p-1.5 rounded-lg border border-[var(--color-border)] text-[var(--color-neon-teal)] hover:bg-[var(--color-neon-teal)]/10 transition"
+                        className="p-1.5 rounded-lg border border-[var(--color-border)] text-[var(--color-neon-teal)] hover:bg-[var(--color-neon-teal)]/10 transition cursor-pointer"
                         title="Duplicate"
                       >
                         <Copy className="w-3.5 h-3.5" />
@@ -1828,7 +1828,7 @@ export default function GuideComponent() {
                       <button
                         type="button"
                         onClick={() => handleDeleteGrid(grid.id)}
-                        className="p-1.5 rounded-lg border border-[var(--color-border)] text-red-400 hover:bg-red-500/10 transition"
+                        className="p-1.5 rounded-lg border border-[var(--color-border)] text-red-400 hover:bg-red-500/10 transition cursor-pointer"
                         title="Delete"
                       >
                         <Trash2 className="w-3.5 h-3.5" />
